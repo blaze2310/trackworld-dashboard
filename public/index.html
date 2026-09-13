@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Trackworld | AI Travel Planner</title>
+
+  <meta
+    name="description"
+    content="Create a personalised preliminary travel itinerary with Trackworld Tours & Travels Pvt Ltd."
+  >
+
+  <meta name="theme-color" content="#bf2032">
+
+  <link
+    rel="icon"
+    type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23bf2032'/%3E%3Ctext x='7' y='24' fill='white' font-size='24' font-family='serif'%3Et%3C/text%3E%3C/svg%3E"
+  >
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+  <header class="site-header">
+    <a
+      class="brand"
+      href="#planner"
+      aria-label="Trackworld Tours and Travels home"
+    >
+      <span class="brand-name">
+        track<span>world</span>
+      </span>
+
+      <small>Tours & Travels Pvt Ltd</small>
+    </a>
+
+    <nav aria-label="Primary navigation">
+      <a href="#planner" class="active">
+        Trip planner
+      </a>
+
+      <a href="#results" id="itineraryLink">
+        Your itinerary
+      </a>
+
+      <button
+        class="outline appointment"
+        type="button"
+      >
+        Talk to a travel expert
+        <span aria-hidden="true">↗</span>
+      </button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div>
+        <p class="eyebrow">
+          A journey made for you
+        </p>
+
+        <h1>
+          Your next travel destination
+          <em>awaits.</em>
+        </h1>
+
+        <p class="intro-copy">
+          Share what matters to you and receive a
+          preliminary itinerary designed around your
+          dates, budget and travel preferences.
+        </p>
+      </div>
+
+      <div
+        id="systemStatus"
+        class="system-status"
+        role="status"
+        aria-live="polite"
+      >
+        <span
+          class="status-dot"
+          aria-hidden="true"
+        ></span>
+
+        <span id="systemStatusText">
+          Checking planner status…
+        </span>
+      </div>
+    </section>
+
+    <div class="workspace" id="planner">
+      <form
+        id="tripForm"
+        class="panel planner-panel"
+      >
+        <div class="panel-head">
+          <div>
+            <p class="panel-kicker">
+              AI trip planner
+            </p>
+
+            <h2>Design your journey</h2>
+
+            <p>
+              Tell us what your ideal trip looks like.
+            </p>
+          </div>
+
+          <button
+            class="quiet"
+            type="reset"
+          >
+            Reset
+          </button>
+        </div>
+
+        <section class="section">
+          <h3 class="section-title">
+            <span class="number">01</span>
+            Where and when
+          </h3>
+
+          <div
+            class="segmented"
+            aria-label="Select trip type"
+          >
+            <button
+              type="button"
+              data-type="International"
+              class="selected"
+              aria-pressed="true"
+            >
+              International
+            </button>
+
+            <button
+              type="button"
+              data-type="Domestic"
+              aria-pressed="false"
+            >
+              Domestic
+            </button>
+          </div>
+
+          <div class="grid">
+            <div class="field">
+              <label for="origin">
+                Travelling from
+              </label>
+
+              <input
+                id="origin"
+                name="origin"
+                type="text"
+                value="New Delhi"
+                required
+                maxlength="100"
+                autocomplete="off"
+                placeholder="Enter your departure city"
+              >
+
+              <small class="field-help">
+                Domestic trips require an Indian city
+                from the suggestions. International
+                trips allow other locations.
+              </small>
+            </div>
+
+            <div class="field">
+              <label for="destination">
+                Dream destination
+              </label>
+
+              <input
+                id="destination"
+                name="destination"
+                type="text"
+                value="Dubai"
+                required
+                maxlength="100"
+                autocomplete="off"
+                placeholder="Enter a city or destination"
+              >
+
+              <small class="field-help">
+                Domestic trips require an Indian
+                destination from the suggestions.
+                Switch to International for locations
+                outside India.
+              </small>
+            </div>
+
+            <div class="field">
+              <label for="start">
+                Departure date
+              </label>
+
+              <input
+                id="start"
+                name="start"
+                type="date"
+                required
+              >
+            </div>
+
+            <div class="field">
+              <label for="end">
+                Return date
+              </label>
+
+              <input
+                id="end"
+                name="end"
+                type="date"
+                required
+              >
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3 class="section-title">
+            <span class="number">02</span>
+            Travel party and budget
+          </h3>
+
+          <div class="grid">
+            <div class="field">
+              <label for="adults">
+                Adults
+                <span>12 years and above</span>
+              </label>
+
+              <div class="counter">
+                <button
+                  type="button"
+                  data-counter="adults"
+                  data-delta="-1"
+                  aria-label="Remove one adult"
+                >
+                  −
+                </button>
+
+                <input
+                  id="adults"
+                  name="adults"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value="2"
+                  required
+                >
+
+                <button
+                  type="button"
+                  data-counter="adults"
+                  data-delta="1"
+                  aria-label="Add one adult"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="children">
+                Children
+                <span>Under 12 years</span>
+              </label>
+
+              <div class="counter">
+                <button
+                  type="button"
+                  data-counter="children"
+                  data-delta="-1"
+                  aria-label="Remove one child"
+                >
+                  −
+                </button>
+
+                <input
+                  id="children"
+                  name="children"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value="0"
+                  required
+                >
+
+                <button
+                  type="button"
+                  data-counter="children"
+                  data-delta="1"
+                  aria-label="Add one child"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="budget">
+                Your budget
+                <span>In Indian rupees</span>
+              </label>
+
+              <input
+                id="budget"
+                name="budget"
+                type="number"
+                min="1000"
+                max="100000000"
+                step="1000"
+                value="150000"
+                required
+              >
+            </div>
+
+            <div class="field">
+              <label for="budgetType">
+                Budget applies to
+              </label>
+
+              <select
+                id="budgetType"
+                name="budgetType"
+              >
+                <option value="total">
+                  Entire group
+                </option>
+
+                <option value="person">
+                  Each traveller
+                </option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3 class="section-title">
+            <span class="number">03</span>
+            Make it personal
+          </h3>
+
+          <div class="grid preference-grid">
+            <div class="field">
+              <label for="occasion">
+                What is the occasion?
+              </label>
+
+              <select
+                id="occasion"
+                name="occasion"
+              >
+                <option>Leisure escape</option>
+                <option>Family vacation</option>
+                <option>Honeymoon</option>
+                <option>Anniversary</option>
+                <option>Friends getaway</option>
+                <option>School / college trip</option>
+                <option>Business travel</option>
+                <option>Solo adventure</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="hotel">
+                Stay preference
+              </label>
+
+              <select id="hotel" name="hotel">
+                <option>4-star comfort</option>
+                <option>3-star essentials</option>
+                <option>5-star luxury</option>
+                <option>Boutique stays</option>
+                <option>Open to suggestions</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="pace">
+                Travel pace
+              </label>
+
+              <select id="pace" name="pace">
+                <option>Balanced</option>
+                <option>Relaxed</option>
+                <option>Activity-packed</option>
+              </select>
+            </div>
+          </div>
+
+          <fieldset class="choice-group">
+            <legend>
+              What draws you in?
+            </legend>
+
+            <div
+              class="chips"
+              id="interests"
+            ></div>
+          </fieldset>
+
+          <fieldset class="choice-group">
+            <legend>
+              Let us take care of
+            </legend>
+
+            <div
+              class="chips"
+              id="services"
+            ></div>
+          </fieldset>
+
+          <div class="field comments-field">
+            <label for="comments">
+              Anything else we should know?
+            </label>
+
+            <textarea
+              id="comments"
+              name="comments"
+              maxlength="2000"
+              placeholder="Dietary preferences, accessibility requirements, special celebrations or anything else that matters to you."
+            ></textarea>
+
+            <div class="textarea-meta">
+              <small>
+                These requirements will be included
+                for expert review.
+              </small>
+
+              <small id="commentCount">
+                0 / 2000
+              </small>
+            </div>
+          </div>
+        </section>
+
+        <div class="form-foot">
+          <p
+            id="error"
+            class="error"
+            role="alert"
+          ></p>
+
+          <button
+            class="primary generate-button"
+            id="generate"
+            type="submit"
+          >
+            <span aria-hidden="true">✦</span>
+            Create my itinerary
+            <span aria-hidden="true">→</span>
+          </button>
+
+          <small>
+            Preliminary planning only. Final travel
+            arrangements are handled by a Trackworld
+            travel expert.
+          </small>
+        </div>
+      </form>
+
+      <aside class="aside">
+        <div class="panel journey-card">
+          <div class="photo">
+            <img
+              id="travelImage"
+              alt="Mountain lake travel inspiration"
+              hidden
+            >
+
+            <div class="photo-caption">
+              <small>
+                THE WORLD IS YOURS TO EXPLORE
+              </small>
+
+              <h2>
+                Go somewhere unforgettable.
+              </h2>
+            </div>
+          </div>
+
+          <div class="summary">
+            <p class="panel-kicker">
+              Your selected journey
+            </p>
+
+            <h3>
+              At a glance
+            </h3>
+
+            <div class="summary-row">
+              <span>Destination</span>
+              <strong id="sumDestination"></strong>
+            </div>
+
+            <div class="summary-row">
+              <span>Departing from</span>
+              <strong id="sumOrigin"></strong>
+            </div>
+
+            <div class="summary-row">
+              <span>Travel dates</span>
+              <strong id="sumDates"></strong>
+            </div>
+
+            <div class="summary-row">
+              <span>Travellers</span>
+              <strong id="sumTravellers"></strong>
+            </div>
+
+            <div class="summary-row">
+              <span>Travel style</span>
+              <strong id="sumStyle"></strong>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="summary-row budget-heading">
+              <span>Total trip budget</span>
+              <span id="sumNights"></span>
+            </div>
+
+            <div
+              class="budget-value"
+              id="sumBudget"
+            ></div>
+
+            <div
+              class="budget-meta"
+              id="sumPerPerson"
+            ></div>
+          </div>
+        </div>
+
+        <div class="tip">
+          <span
+            class="tip-icon"
+            aria-hidden="true"
+          >
+            ✦
+          </span>
+
+          <div>
+            <h3>
+              Planned with you. Perfected by us.
+            </h3>
+
+            <p>
+              Explore your preliminary itinerary,
+              then let a Trackworld expert take care
+              of tickets, hotels, visas and the finer
+              details.
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="step-line"
+          aria-label="Planning process"
+        >
+          <b>01 Plan</b>
+          <span>—</span>
+          <span>02 Personalise</span>
+          <span>—</span>
+          <span>03 Meet your expert</span>
+        </div>
+      </aside>
+    </div>
+
+    <section
+      id="results"
+      class="panel results"
+      hidden
+      aria-live="polite"
+    >
+      <div
+        id="resultsLoading"
+        class="results-loading"
+        hidden
+      >
+        <div
+          class="loading-mark"
+          aria-hidden="true"
+        >
+          ✦
+        </div>
+
+        <div>
+          <h2>
+            Shaping your journey…
+          </h2>
+
+          <p>
+            We are turning your travel preferences
+            into a thoughtful preliminary itinerary.
+          </p>
+        </div>
+      </div>
+
+      <div id="resultContent">
+        <div class="result-body">
+          <div class="result-top">
+            <div>
+              <p class="eyebrow">
+                Your preliminary journey
+              </p>
+
+              <h2 id="resultTitle"></h2>
+
+              <p id="resultSummary"></p>
+
+              <div class="result-meta">
+                <span id="resultSource">
+                  Preliminary itinerary
+                </span>
+
+                <span
+                  id="cacheStatus"
+                  hidden
+                ></span>
+              </div>
+            </div>
+
+            <button
+              class="outline"
+              id="print"
+              type="button"
+            >
+              Print / save PDF
+            </button>
+          </div>
+
+          <div
+            class="notice"
+            id="resultNotice"
+          >
+            Preliminary itinerary. Prices,
+            availability and travel requirements need
+            expert verification.
+          </div>
+
+          <div id="days"></div>
+
+          <div class="insight-grid">
+            <section class="insight-card">
+              <p class="insight-label">
+                Budget guidance
+              </p>
+
+              <p id="budgetGuidance">
+                Final costs depend on availability
+                and confirmed selections.
+              </p>
+            </section>
+
+            <section class="insight-card">
+              <p class="insight-label">
+                Services to discuss
+              </p>
+
+              <ul id="recommendedServices"></ul>
+            </section>
+
+            <section class="insight-card">
+              <p class="insight-label">
+                Important notes
+              </p>
+
+              <ul id="importantNotes"></ul>
+            </section>
+          </div>
+
+          <div
+            id="preferences"
+            class="notice preference-notice"
+          ></div>
+
+          <div class="handoff">
+            <div>
+              <p class="panel-kicker">
+                The human touch
+              </p>
+
+              <h3>
+                Let us bring your journey to life.
+              </h3>
+
+              <p>
+                A Trackworld expert can refine this
+                plan and arrange tickets, hotels,
+                transfers, visas and other travel
+                services.
+              </p>
+            </div>
+
+            <button
+              class="primary appointment"
+              type="button"
+            >
+              Book an appointment
+              <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>
+      © Trackworld Tours & Travels Pvt Ltd
+    </span>
+
+    <span>
+      Preliminary planning only · No bookings or
+      payments are processed on this demonstration.
+    </span>
+
+    <a
+      id="photoCredit"
+      href="#"
+      hidden
+      target="_blank"
+      rel="noopener"
+    >
+      Photo credit
+    </a>
+  </footer>
+
+  <dialog
+    id="appointmentDialog"
+    aria-labelledby="appointmentTitle"
+  >
+    <div class="dialog-head">
+      <div>
+        <p class="panel-kicker">
+          Personal travel assistance
+        </p>
+
+        <h2 id="appointmentTitle">
+          Meet your travel expert
+        </h2>
+      </div>
+
+      <button
+        id="closeDialog"
+        type="button"
+        aria-label="Close appointment form"
+      >
+        ×
+      </button>
+    </div>
+
+    <p>
+      Prepare a consultation request for later
+      sharing. This demonstration does not send the
+      request and does not reserve an appointment.
+    </p>
+
+    <div
+      id="appointmentTripSummary"
+      class="appointment-trip-summary"
+    ></div>
+
+    <form id="appointmentForm">
+      <div class="dialog-grid">
+        <div class="field">
+          <label for="customerName">
+            Your name
+          </label>
+
+          <input
+            id="customerName"
+            name="customerName"
+            type="text"
+            required
+            maxlength="100"
+            autocomplete="name"
+          >
+        </div>
+
+        <div class="field">
+          <label for="email">
+            Email address
+          </label>
+
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            maxlength="150"
+            autocomplete="email"
+          >
+        </div>
+
+        <div class="field">
+          <label for="phone">
+            Phone number
+          </label>
+
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            maxlength="30"
+            autocomplete="tel"
+            placeholder="+91"
+          >
+        </div>
+
+        <div class="field">
+          <label for="preferredDate">
+            Preferred consultation date
+          </label>
+
+          <input
+            id="preferredDate"
+            name="preferredDate"
+            type="date"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="preferredTime">
+            Preferred time
+          </label>
+
+          <select
+            id="preferredTime"
+            name="preferredTime"
+          >
+            <option value="">
+              No preference
+            </option>
+
+            <option>Morning</option>
+            <option>Afternoon</option>
+            <option>Evening</option>
+          </select>
+        </div>
+      </div>
+
+      <button
+        class="primary dialog-submit"
+        type="submit"
+      >
+        Prepare consultation request
+      </button>
+
+      <p
+        class="status"
+        id="appointmentStatus"
+        role="status"
+      ></p>
+
+      <button
+        type="button"
+        id="downloadRequest"
+        class="outline"
+        hidden
+      >
+        Download request
+      </button>
+    </form>
+  </dialog>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

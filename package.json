@@ -1,0 +1,21 @@
+{
+  "name": "trackworld-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI travel itinerary dashboard for Trackworld Tours and Travels Pvt Ltd",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check public/app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@google/genai": "^1.20.0",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0"
+  }
+}
