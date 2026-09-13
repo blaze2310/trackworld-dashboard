@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
+  <meta name="viewport" content="width=device-width,initial-scale=1">
 
   <title>Trackworld | AI Travel Planner</title>
 
@@ -22,10 +19,7 @@
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23bf2032'/%3E%3Ctext x='7' y='24' fill='white' font-size='24' font-family='serif'%3Et%3C/text%3E%3C/svg%3E"
   >
 
-  <link
-    rel="preconnect"
-    href="https://fonts.googleapis.com"
-  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
 
   <link
     rel="preconnect"
@@ -506,9 +500,7 @@
               Your selected journey
             </p>
 
-            <h3>
-              At a glance
-            </h3>
+            <h3>At a glance</h3>
 
             <div class="summary-row">
               <span>Destination</span>
@@ -591,7 +583,7 @@
 
     <section
       id="results"
-      class="panel results"
+      class="panel results premium-results"
       hidden
       aria-live="polite"
     >
@@ -608,9 +600,7 @@
         </div>
 
         <div>
-          <h2>
-            Shaping your journey…
-          </h2>
+          <h2>Shaping your journey…</h2>
 
           <p>
             We are turning your travel preferences
@@ -620,51 +610,154 @@
       </div>
 
       <div id="resultContent">
-        <div class="result-body">
-          <div class="result-top">
-            <div>
-              <p class="eyebrow">
-                Your preliminary journey
-              </p>
+        <div class="result-hero">
+          <div class="result-hero-copy">
+            <p class="eyebrow">
+              Your preliminary journey
+            </p>
 
-              <h2 id="resultTitle"></h2>
+            <h2 id="resultTitle"></h2>
 
-              <p id="resultSummary"></p>
+            <p id="resultSummary"></p>
 
-              <div class="result-meta">
-                <span id="resultSource">
-                  Preliminary itinerary
-                </span>
+            <div class="result-meta">
+              <span id="resultSource">
+                Preliminary itinerary
+              </span>
 
-                <span
-                  id="cacheStatus"
-                  hidden
-                ></span>
-              </div>
+              <span
+                id="cacheStatus"
+                hidden
+              ></span>
             </div>
-
-            <button
-              class="outline"
-              id="print"
-              type="button"
-            >
-              Print / save PDF
-            </button>
           </div>
 
-          <div
-            class="notice"
-            id="resultNotice"
+          <button
+            class="outline result-print"
+            id="print"
+            type="button"
           >
-            Preliminary itinerary. Prices,
-            availability and travel requirements need
-            expert verification.
+            <span aria-hidden="true">↧</span>
+            Print / save PDF
+          </button>
+        </div>
+
+        <div class="trip-overview">
+          <div class="overview-item">
+            <span class="overview-icon" aria-hidden="true">
+              ↗
+            </span>
+
+            <div>
+              <small>ROUTE</small>
+              <strong id="overviewRoute">
+                Your selected route
+              </strong>
+            </div>
           </div>
 
-          <div id="days"></div>
+          <div class="overview-item">
+            <span class="overview-icon" aria-hidden="true">
+              ◷
+            </span>
+
+            <div>
+              <small>DURATION</small>
+              <strong id="overviewDuration">
+                Trip duration
+              </strong>
+            </div>
+          </div>
+
+          <div class="overview-item">
+            <span class="overview-icon" aria-hidden="true">
+              ◉
+            </span>
+
+            <div>
+              <small>TRAVELLERS</small>
+              <strong id="overviewTravellers">
+                Travel party
+              </strong>
+            </div>
+          </div>
+
+          <div class="overview-item">
+            <span class="overview-icon" aria-hidden="true">
+              ₹
+            </span>
+
+            <div>
+              <small>BUDGET</small>
+              <strong id="overviewBudget">
+                Budget target
+              </strong>
+            </div>
+          </div>
+
+          <div class="overview-item">
+            <span class="overview-icon" aria-hidden="true">
+              ✦
+            </span>
+
+            <div>
+              <small>TRAVEL STYLE</small>
+              <strong id="overviewPace">
+                Selected pace
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="notice result-disclaimer"
+          id="resultNotice"
+        >
+          Preliminary itinerary. Prices,
+          availability and travel requirements need
+          expert verification.
+        </div>
+
+        <div class="journey-heading">
+          <div>
+            <p class="eyebrow">
+              Day-by-day plan
+            </p>
+
+            <h3>Your journey, thoughtfully arranged</h3>
+          </div>
+
+          <p>
+            Open or close each day to explore the
+            morning, afternoon and evening plan.
+          </p>
+        </div>
+
+        <div
+          id="days"
+          class="itinerary-timeline"
+        ></div>
+
+        <div class="planning-insights">
+          <div class="planning-heading">
+            <p class="eyebrow">
+              Planning insights
+            </p>
+
+            <h3>
+              Useful guidance before you speak to an expert
+            </h3>
+          </div>
 
           <div class="insight-grid">
-            <section class="insight-card">
+            <section class="insight-card budget-card">
+              <div
+                class="insight-icon"
+                aria-hidden="true"
+              >
+                ₹
+              </div>
+
               <p class="insight-label">
                 Budget guidance
               </p>
@@ -675,7 +768,14 @@
               </p>
             </section>
 
-            <section class="insight-card">
+            <section class="insight-card services-card">
+              <div
+                class="insight-icon"
+                aria-hidden="true"
+              >
+                ✓
+              </div>
+
               <p class="insight-label">
                 Services to discuss
               </p>
@@ -683,7 +783,14 @@
               <ul id="recommendedServices"></ul>
             </section>
 
-            <section class="insight-card">
+            <section class="insight-card notes-card">
+              <div
+                class="insight-icon"
+                aria-hidden="true"
+              >
+                i
+              </div>
+
               <p class="insight-label">
                 Important notes
               </p>
@@ -691,35 +798,45 @@
               <ul id="importantNotes"></ul>
             </section>
           </div>
+        </div>
 
-          <div
-            id="preferences"
-            class="notice preference-notice"
-          ></div>
+        <div
+          id="preferences"
+          class="notice preference-notice"
+        ></div>
 
-          <div class="handoff">
-            <div>
-              <p class="panel-kicker">
-                The human touch
-              </p>
+        <div class="handoff premium-handoff">
+          <div>
+            <p class="panel-kicker">
+              From plan to reality
+            </p>
 
-              <h3>
-                Let us bring your journey to life.
-              </h3>
+            <h3>
+              Let us bring your journey to life.
+            </h3>
 
-              <p>
-                A Trackworld expert can refine this
-                plan and arrange tickets, hotels,
-                transfers, visas and other travel
-                services.
-              </p>
-            </div>
+            <p>
+              A Trackworld expert can refine this
+              itinerary and arrange tickets, hotels,
+              transfers, visas and other travel
+              services.
+            </p>
+          </div>
+
+          <div class="handoff-actions">
+            <button
+              class="outline light-outline"
+              id="planAnother"
+              type="button"
+            >
+              Plan another trip
+            </button>
 
             <button
               class="primary appointment"
               type="button"
             >
-              Book an appointment
+              Meet your travel expert
               <span aria-hidden="true">↗</span>
             </button>
           </div>

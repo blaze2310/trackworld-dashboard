@@ -1248,3 +1248,98 @@ function initialiseImage() {
 initialiseImage();
 updateSummary();
 loadStatus();
+
+/*
+ * Premium itinerary presentation
+ * --------------------------------
+ * This block supports the itinerary overview bar,
+ * timeline numbering and Plan another trip button.
+ * It does not make any Gemini API requests.
+ */
+
+function updatePremiumTripOverview() {
+  if (!generatedTrip) return;
+
+  const trip = generatedTrip;
+  const result = generatedTrip.result;
+  const days =
+    Array.isArray(result?.days) && result.days.length
+      ? result.days.length
+      : tripDays(trip);
+
+  const travellers =
+    Number(trip.adults) + Number(trip.children);
+
+  const totalBudget =
+    trip.budgetType === 'person'
+      ? trip.budget * travellers
+      : trip.budget;
+
+  if ($('overviewRoute')) {
+    $('overviewRoute').textContent =
+      `${trip.origin} → ${trip.destination}`;
+  }
+
+  if ($('overviewDuration')) {
+    $('overviewDuration').textContent =
+      `${days} day${days === 1 ? '' : 's'} · ` +
+      `${Math.max(0, days - 1)} night${
+        days - 1 === 1 ? '' : 's'
+      }`;
+  }
+
+  if ($('overviewTravellers')) {
+    $('overviewTravellers').textContent =
+      `${travellers} traveller${
+        travellers === 1 ? '' : 's'
+      }`;
+  }
+
+  if ($('overviewBudget')) {
+    $('overviewBudget').textContent =
+      formatCurrency(totalBudget);
+  }
+
+  if ($('overviewPace')) {
+    $('overviewPace').textContent =
+      `${trip.pace} · ${trip.hotel}`;
+  }
+
+  document.querySelectorAll('.day').forEach(
+    (day, index) => {
+      day.style.setProperty(
+        '--day-number',
+        `"${String(index + 1).padStart(2, '0')}"`
+      );
+    }
+  );
+}
+
+const resultObserver = new MutationObserver(() => {
+  if (
+    generatedTrip &&
+    !$('results').hidden &&
+    $('resultTitle').textContent.trim()
+  ) {
+    updatePremiumTripOverview();
+  }
+});
+
+resultObserver.observe($('resultTitle'), {
+  childList: true,
+  characterData: true,
+  subtree: true
+});
+
+if ($('planAnother')) {
+  $('planAnother').addEventListener('click', () => {
+    $('planner').scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+
+    setTimeout(() => {
+      $('destination').focus();
+    }, 500);
+  });
+}
