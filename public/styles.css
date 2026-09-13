@@ -2934,3 +2934,145 @@ dialog > p {
   }
 }
 }
+
+/* =========================================================
+   FINAL BRAND, GLOBAL CITY SEARCH AND FOOTER LAYOUT
+   ========================================================= */
+
+.site-header .brand {
+  min-width: max-content;
+  flex-shrink: 0;
+}
+
+.site-header .brand-name {
+  white-space: nowrap;
+}
+
+.site-header .brand small {
+  max-width: 220px;
+  white-space: nowrap;
+}
+
+.place-options {
+  overscroll-behavior: contain;
+  scrollbar-color:
+    var(--red-border)
+    var(--surface);
+  scrollbar-width: thin;
+}
+
+.place-options::-webkit-scrollbar {
+  width: 8px;
+}
+
+.place-options::-webkit-scrollbar-track {
+  background: var(--surface);
+  border-radius: 999px;
+}
+
+.place-options::-webkit-scrollbar-thumb {
+  background: var(--red-border);
+  border-radius: 999px;
+}
+
+.place-option {
+  min-height: 52px;
+}
+
+.place-option strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.place-option small {
+  max-width: 58%;
+  overflow-wrap: anywhere;
+}
+
+footer {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+footer > span:first-child {
+  flex-shrink: 0;
+  font-weight: 650;
+}
+
+footer > span:nth-child(2) {
+  flex: 1 1 360px;
+  text-align: center;
+}
+
+footer > span:nth-child(3) {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+footer > span:nth-child(3) a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+footer > span:nth-child(3) a:hover {
+  color: var(--red);
+}
+
+@media screen and (max-width: 980px) {
+  footer > span:nth-child(2) {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  .site-header .brand small {
+    max-width: 160px;
+    letter-spacing: 1.35px;
+  }
+
+  .place-options {
+    top: 72px;
+    max-height: min(310px, 48vh);
+  }
+
+  .place-option {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+  }
+
+  .place-option small {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  footer {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  footer > span:nth-child(2) {
+    order: initial;
+    flex-basis: auto;
+    text-align: left;
+  }
+
+  footer > span:nth-child(3) {
+    white-space: normal;
+  }
+}
+
+@media screen and (max-width: 430px) {
+  .site-header .brand-name {
+    font-size: 22px;
+    letter-spacing: -1.2px;
+  }
+
+  .site-header .brand small {
+    margin-top: 6px;
+    font-size: 7px;
+    letter-spacing: 1.1px;
+  }
+}

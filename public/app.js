@@ -93,166 +93,34 @@ const loadingStages = [
   'Preparing recommendations for expert review'
 ];
 
-const places = [
-  ['New Delhi', 'India', 'Delhi DEL'],
-  ['Mumbai', 'India', 'Bombay BOM'],
-  ['Bengaluru', 'India', 'Bangalore BLR'],
-  ['Chennai', 'India', 'Madras MAA'],
-  ['Kolkata', 'India', 'Calcutta CCU'],
-  ['Hyderabad', 'India', 'HYD'],
-  ['Ahmedabad', 'India', 'AMD'],
-  ['Pune', 'India', 'PNQ'],
-  ['Goa', 'India', 'GOI GOX'],
-  ['Jaipur', 'India', 'JAI'],
-  ['Udaipur', 'India', 'UDR'],
-  ['Kochi', 'India', 'Cochin Kerala COK'],
-  [
-    'Thiruvananthapuram',
-    'India',
-    'Trivandrum Kerala TRV'
-  ],
-  ['Manali', 'India', 'Himachal Pradesh'],
-  ['Shimla', 'India', 'Himachal Pradesh'],
-  ['Srinagar', 'India', 'Kashmir SXR'],
-  ['Leh', 'India', 'Ladakh IXL'],
-  ['Rishikesh', 'India', 'Uttarakhand'],
-  ['Varanasi', 'India', 'Banaras VNS'],
-  ['Amritsar', 'India', 'Punjab ATQ'],
-  ['Chandigarh', 'India', 'IXC'],
-  ['Lucknow', 'India', 'LKO'],
-  ['Indore', 'India', 'IDR'],
-  ['Bhopal', 'India', 'BHO'],
-  ['Agra', 'India', 'Taj Mahal'],
-  ['Darjeeling', 'India', 'West Bengal'],
-  ['Gangtok', 'India', 'Sikkim'],
-  ['Shillong', 'India', 'Meghalaya'],
-  ['Guwahati', 'India', 'Assam GAU'],
-  [
-    'Port Blair',
-    'India',
-    'Andaman Islands IXZ'
-  ],
-  [
-    'Kerala',
-    'India',
-    'Munnar Alleppey'
-  ],
+const selectedPlaces = {
+  origin: null,
+  destination: null
+};
 
-  [
-    'Dubai',
-    'United Arab Emirates',
-    'UAE DXB'
-  ],
-  [
-    'Abu Dhabi',
-    'United Arab Emirates',
-    'UAE AUH'
-  ],
-  ['Bali', 'Indonesia', 'Denpasar DPS'],
-  ['Singapore', 'Singapore', 'SIN'],
-  ['Bangkok', 'Thailand', 'BKK'],
-  ['Phuket', 'Thailand', 'HKT'],
-  ['Krabi', 'Thailand', 'KBV'],
-  ['Maldives', 'Maldives', 'Malé MLE'],
-  ['Paris', 'France', 'CDG'],
-  [
-    'London',
-    'United Kingdom',
-    'England LHR'
-  ],
-  ['Rome', 'Italy', 'FCO'],
-  ['Venice', 'Italy', 'VCE'],
-  ['Milan', 'Italy', 'MXP'],
-  [
-    'Zurich',
-    'Switzerland',
-    'ZRH'
-  ],
-  [
-    'Interlaken',
-    'Switzerland',
-    'Swiss Alps'
-  ],
-  [
-    'Lucerne',
-    'Switzerland',
-    'Luzern'
-  ],
-  [
-    'Amsterdam',
-    'Netherlands',
-    'AMS'
-  ],
-  ['Barcelona', 'Spain', 'BCN'],
-  ['Madrid', 'Spain', 'MAD'],
-  ['Lisbon', 'Portugal', 'LIS'],
-  ['Athens', 'Greece', 'ATH'],
-  ['Santorini', 'Greece', 'JTR'],
-  [
-    'Istanbul',
-    'Türkiye',
-    'Turkey IST'
-  ],
-  ['Tokyo', 'Japan', 'NRT HND'],
-  ['Kyoto', 'Japan', 'Osaka'],
-  [
-    'Seoul',
-    'South Korea',
-    'ICN'
-  ],
-  [
-    'Hong Kong',
-    'Hong Kong',
-    'HKG'
-  ],
-  [
-    'Kuala Lumpur',
-    'Malaysia',
-    'KUL'
-  ],
-  ['Hanoi', 'Vietnam', 'HAN'],
-  [
-    'Ho Chi Minh City',
-    'Vietnam',
-    'Saigon SGN'
-  ],
-  ['Da Nang', 'Vietnam', 'DAD'],
-  ['Colombo', 'Sri Lanka', 'CMB'],
-  ['Kathmandu', 'Nepal', 'KTM'],
-  ['Paro', 'Bhutan', 'PBH'],
-  ['Sydney', 'Australia', 'SYD'],
-  ['Melbourne', 'Australia', 'MEL'],
-  [
-    'Auckland',
-    'New Zealand',
-    'AKL'
-  ],
-  [
-    'New York',
-    'United States',
-    'NYC JFK'
-  ],
-  [
-    'Los Angeles',
-    'United States',
-    'LAX'
-  ],
-  ['Toronto', 'Canada', 'YYZ'],
-  ['Vancouver', 'Canada', 'YVR'],
-  [
-    'Cape Town',
-    'South Africa',
-    'CPT'
-  ],
-  ['Nairobi', 'Kenya', 'NBO'],
-  ['Mauritius', 'Mauritius', 'MRU'],
-  ['Seychelles', 'Seychelles', 'SEZ'],
-  ['Cairo', 'Egypt', 'CAI'],
-  ['Doha', 'Qatar', 'DOH'],
-  ['Muscat', 'Oman', 'MCT'],
-  ['Baku', 'Azerbaijan', 'GYD'],
-  ['Tbilisi', 'Georgia', 'TBS']
-];
+function clearSelectedPlace(id) {
+  selectedPlaces[id] = null;
+}
+
+function setSelectedPlace(
+  id,
+  place
+) {
+  selectedPlaces[id] = place;
+}
+
+function isSelectedIndianPlace(id) {
+  const input = $(id);
+  const place =
+    selectedPlaces[id];
+
+  return Boolean(
+    place &&
+    place.countryCode === 'IN' &&
+    normalize(place.name) ===
+      normalize(input.value)
+  );
+}
 
 function createChips(
   id,
@@ -362,18 +230,6 @@ function normalize(value) {
     .trim();
 }
 
-function isIndianPlace(value) {
-  const requestedPlace =
-    normalize(value);
-
-  return places.some(place => {
-    return (
-      place[1] === 'India' &&
-      normalize(place[0]) ===
-        requestedPlace
-    );
-  });
-}
 
 function getChecked(name) {
   return [
@@ -579,9 +435,7 @@ function validateDomesticField(
   }
 
   if (
-    isIndianPlace(
-      input.value
-    )
+    isSelectedIndianPlace(id)
   ) {
     input.setCustomValidity('');
 
@@ -639,11 +493,11 @@ function validateTrip(trip) {
     trip.type ===
       'Domestic' &&
     (
-      !isIndianPlace(
-        trip.origin
+      !isSelectedIndianPlace(
+        'origin'
       ) ||
-      !isIndianPlace(
-        trip.destination
+      !isSelectedIndianPlace(
+        'destination'
       )
     )
   ) {
@@ -858,220 +712,69 @@ function setTripType(type) {
   clearDomesticValidity();
   showError('');
 
-  if (
-    type === 'Domestic'
-  ) {
+  if (type === 'Domestic') {
     if (
-      !isIndianPlace(
-        $('origin').value
+      !isSelectedIndianPlace(
+        'origin'
       )
     ) {
       $('origin').value =
         'New Delhi';
+
+      setSelectedPlace(
+        'origin',
+        {
+          id: 1261481,
+          name: 'New Delhi',
+          region: 'Delhi',
+          country: 'India',
+          countryCode: 'IN'
+        }
+      );
     }
 
     if (
-      !isIndianPlace(
-        $('destination').value
+      !isSelectedIndianPlace(
+        'destination'
       )
     ) {
       $('destination').value =
         'Goa';
+
+      setSelectedPlace(
+        'destination',
+        {
+          name: 'Goa',
+          region: 'Goa',
+          country: 'India',
+          countryCode: 'IN'
+        }
+      );
     }
-  } else if (
-    !$('destination')
-      .value
-      .trim() ||
-    isIndianPlace(
-      $('destination').value
-    )
-  ) {
-    $('destination').value =
-      'Dubai';
+  } else {
+    clearSelectedPlace(
+      'origin'
+    );
+
+    clearSelectedPlace(
+      'destination'
+    );
+
+    if (
+      !$('destination')
+        .value
+        .trim() ||
+      normalize(
+        $('destination').value
+      ) === 'goa'
+    ) {
+      $('destination').value =
+        'Dubai';
+    }
   }
 
   updateSummary();
 }
-
-function editDistance(
-  first,
-  second
-) {
-  let previous =
-    Array.from(
-      {
-        length:
-          second.length + 1
-      },
-      (_, index) => index
-    );
-
-  for (
-    let firstIndex = 1;
-    firstIndex <=
-      first.length;
-    firstIndex += 1
-  ) {
-    const current = [
-      firstIndex
-    ];
-
-    for (
-      let secondIndex = 1;
-      secondIndex <=
-        second.length;
-      secondIndex += 1
-    ) {
-      current[secondIndex] =
-        Math.min(
-          current[
-            secondIndex - 1
-          ] + 1,
-
-          previous[
-            secondIndex
-          ] + 1,
-
-          previous[
-            secondIndex - 1
-          ] +
-            (
-              first[
-                firstIndex - 1
-              ] ===
-              second[
-                secondIndex - 1
-              ]
-                ? 0
-                : 1
-            )
-        );
-    }
-
-    previous = current;
-  }
-
-  return previous[
-    second.length
-  ];
-}
-
-function findPlaces(query) {
-  const search =
-    normalize(query);
-
-  return places
-    .filter(place => {
-      return (
-        tripType !==
-          'Domestic' ||
-        place[1] === 'India'
-      );
-    })
-    .map(place => {
-      const name =
-        normalize(place[0]);
-
-      const fullText =
-        normalize(
-          place.join(' ')
-        );
-
-      let score = 100;
-
-      if (!search) {
-        score = 10;
-      } else if (
-        name === search
-      ) {
-        score = 0;
-      } else if (
-        name.startsWith(
-          search
-        )
-      ) {
-        score = 1;
-      } else if (
-        fullText
-          .split(/\s+/)
-          .some(word => {
-            return word.startsWith(
-              search
-            );
-          })
-      ) {
-        score = 2;
-      } else if (
-        fullText.includes(
-          search
-        )
-      ) {
-        score = 3;
-      } else if (
-        search.length >= 3
-      ) {
-        const distance =
-          Math.min(
-            editDistance(
-              search,
-              name
-            ),
-
-            ...name
-              .split(/\s+/)
-              .map(word => {
-                return editDistance(
-                  search,
-                  word
-                );
-              })
-          );
-
-        if (
-          distance <=
-          Math.max(
-            1,
-            Math.floor(
-              search.length / 3
-            )
-          )
-        ) {
-          score =
-            4 + distance;
-        }
-      }
-
-      return {
-        place,
-        score
-      };
-    })
-    .filter(result => {
-      return (
-        result.score < 100
-      );
-    })
-    .sort(
-      (
-        first,
-        second
-      ) => {
-        return (
-          first.score -
-            second.score ||
-          first.place[0]
-            .localeCompare(
-              second.place[0]
-            )
-        );
-      }
-    )
-    .slice(0, 7)
-    .map(result => {
-      return result.place;
-    });
-}
-
 function attachSuggestions(id) {
   const input = $(id);
   const wrapper =
@@ -1085,8 +788,7 @@ function attachSuggestions(id) {
     'list'
   );
 
-  input.autocomplete =
-    'off';
+  input.autocomplete = 'off';
 
   input.setAttribute(
     'role',
@@ -1132,11 +834,12 @@ function attachSuggestions(id) {
 
   let matches = [];
   let activeIndex = -1;
+  let debounceTimer = null;
+  let requestController = null;
+  let requestSequence = 0;
 
   function close() {
-    optionsBox.hidden =
-      true;
-
+    optionsBox.hidden = true;
     activeIndex = -1;
 
     input.setAttribute(
@@ -1149,13 +852,49 @@ function attachSuggestions(id) {
     );
   }
 
+  function showHint(message) {
+    optionsBox
+      .replaceChildren();
+
+    const hint =
+      document.createElement(
+        'div'
+      );
+
+    hint.className =
+      'place-hint';
+
+    hint.textContent =
+      message;
+
+    optionsBox.append(
+      hint
+    );
+
+    optionsBox.hidden =
+      false;
+
+    input.setAttribute(
+      'aria-expanded',
+      'true'
+    );
+  }
+
   function select(index) {
-    if (!matches[index]) {
+    const place =
+      matches[index];
+
+    if (!place) {
       return;
     }
 
     input.value =
-      matches[index][0];
+      place.name;
+
+    setSelectedPlace(
+      id,
+      place
+    );
 
     input.setCustomValidity(
       ''
@@ -1165,7 +904,7 @@ function attachSuggestions(id) {
 
     input.dispatchEvent(
       new Event(
-        'input',
+        'change',
         {
           bubbles: true
         }
@@ -1209,14 +948,7 @@ function attachSuggestions(id) {
       );
   }
 
-  function show() {
-    matches =
-      findPlaces(
-        input.value
-      );
-
-    activeIndex = -1;
-
+  function renderMatches() {
     optionsBox
       .replaceChildren();
 
@@ -1252,19 +984,24 @@ function attachSuggestions(id) {
           );
 
         name.textContent =
-          place[0];
+          place.name;
 
-        const country =
+        const location =
           document.createElement(
             'small'
           );
 
-        country.textContent =
-          place[1];
+        location.textContent =
+          [
+            place.region,
+            place.country
+          ]
+            .filter(Boolean)
+            .join(', ');
 
         option.append(
           name,
-          country
+          location
         );
 
         option.addEventListener(
@@ -1301,13 +1038,13 @@ function attachSuggestions(id) {
     ) {
       hint.textContent =
         matches.length
-          ? 'Indian locations only · select a suggestion'
-          : 'Not an Indian location. Switch to International to search outside India.';
+          ? 'Indian cities only · select a city from these results'
+          : 'No Indian city found. For a location outside India, switch to International.';
     } else {
       hint.textContent =
         matches.length
-          ? 'Suggested places · you may also enter another location'
-          : 'No close match · you may keep your custom location';
+          ? 'Worldwide city results · select the correct city and country'
+          : 'No matching city found. Check the spelling or try a nearby major city.';
     }
 
     optionsBox.append(
@@ -1323,14 +1060,118 @@ function attachSuggestions(id) {
     );
   }
 
+  async function search() {
+    const query =
+      input.value.trim();
+
+    if (query.length < 2) {
+      matches = [];
+
+      showHint(
+        'Type at least two letters to search cities.'
+      );
+
+      return;
+    }
+
+    requestController?.abort();
+
+    requestController =
+      new AbortController();
+
+    const currentSequence =
+      ++requestSequence;
+
+    showHint(
+      'Searching cities…'
+    );
+
+    try {
+      const parameters =
+        new URLSearchParams({
+          q: query,
+          mode: tripType,
+          limit: '8'
+        });
+
+      const response =
+        await fetch(
+          `/api/places?${parameters}`,
+          {
+            headers: {
+              Accept:
+                'application/json'
+            },
+
+            signal:
+              requestController.signal
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+          'City search is temporarily unavailable.'
+        );
+      }
+
+      if (
+        currentSequence !==
+        requestSequence
+      ) {
+        return;
+      }
+
+      matches =
+        Array.isArray(
+          result.results
+        )
+          ? result.results
+          : [];
+
+      activeIndex = -1;
+      renderMatches();
+    } catch (error) {
+      if (
+        error.name ===
+        'AbortError'
+      ) {
+        return;
+      }
+
+      matches = [];
+
+      showHint(
+        'City search is temporarily unavailable. Please try again.'
+      );
+    }
+  }
+
+  function scheduleSearch() {
+    clearTimeout(
+      debounceTimer
+    );
+
+    debounceTimer =
+      setTimeout(
+        search,
+        220
+      );
+  }
+
   input.addEventListener(
     'focus',
-    show
+    scheduleSearch
   );
 
   input.addEventListener(
     'input',
     () => {
+      clearSelectedPlace(id);
+
       if (
         tripType ===
         'Domestic'
@@ -1345,7 +1186,7 @@ function attachSuggestions(id) {
         );
       }
 
-      show();
+      scheduleSearch();
     }
   );
 
@@ -1367,7 +1208,10 @@ function attachSuggestions(id) {
         true
       );
 
-      close();
+      setTimeout(
+        close,
+        120
+      );
     }
   );
 
@@ -1390,15 +1234,7 @@ function attachSuggestions(id) {
       ) {
         event.preventDefault();
 
-        if (
-          optionsBox.hidden
-        ) {
-          show();
-        }
-
-        if (
-          !matches.length
-        ) {
+        if (!matches.length) {
           return;
         }
 
@@ -1439,11 +1275,15 @@ function attachSuggestions(id) {
     .forEach(button => {
       button.addEventListener(
         'click',
-        close
+        () => {
+          requestController
+            ?.abort();
+
+          close();
+        }
       );
     });
 }
-
 function setSystemStatus(
   type,
   message
@@ -1871,14 +1711,14 @@ function normalizeActivity(
 
     description:
       rawItem?.description ||
-      'To be refined with your Trackworld travel expert.'
+      'To be refined with your TrackWorld Vacations travel expert.'
   };
 }
 
 function updateChoiceSummary() {
   if ($('choiceSummary')) {
     $('choiceSummary').textContent =
-      'Review your preliminary schedule, then let a Trackworld expert refine every detail.';
+      'Review your preliminary schedule, then let a TrackWorld Vacations expert refine every detail.';
   }
 }
 
@@ -2780,7 +2620,7 @@ function itineraryAsText() {
   );
 
   lines.push(
-    'Preliminary planning only. All arrangements require Trackworld expert verification.'
+    'Preliminary planning only. All arrangements require TrackWorld Vacations expert verification.'
   );
 
   return lines.join(
@@ -3565,7 +3405,7 @@ $('downloadRequest')
         appointmentRequest
       ) {
         downloadText(
-          'Trackworld-consultation-request.txt',
+          'TrackWorld-Vacations-consultation-request.txt',
           appointmentRequest
         );
       }
@@ -3649,7 +3489,7 @@ $('downloadMetrics')
       }
 
       downloadText(
-        'Trackworld-dashboard-efficiency-data.json',
+        'TrackWorld-Vacations-dashboard-efficiency-data.json',
 
         JSON.stringify(
           records,
@@ -3700,6 +3540,14 @@ form.addEventListener(
 
         $('end').min =
           defaultDates.start;
+
+        clearSelectedPlace(
+          'origin'
+        );
+
+        clearSelectedPlace(
+          'destination'
+        );
 
         clearDomesticValidity();
         showError('');
