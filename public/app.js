@@ -1,13 +1,44 @@
 const $ = id => document.getElementById(id);
 const form = $('tripForm');
 
-const CACHE_PREFIX = 'trackworld-itinerary-v3:';
+const CACHE_PREFIX = 'trackworld-itinerary-v4:';
+const LEGACY_CACHE_PREFIX = 'trackworld-itinerary-v3:';
+const METRICS_KEY = 'trackworld-module1-metrics-v1';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 let tripType = 'International';
 let generatedTrip = null;
 let appointmentRequest = '';
-let serverStatus = { mode: 'mock' };
+let serverStatus = {
+  mode: 'mock',
+  itinerarySchemaVersion: 4
+};
+
+let loadingTimer = null;
+let dayObserver = null;
+
+const sessionMetrics = {
+  sessionId:
+    crypto.randomUUID?.() ||
+    `session-${Date.now()}`,
+
+  module: 'dashboard',
+  startedAt: new Date().toISOString(),
+  firstInteractionAt: null,
+  submittedAt: null,
+  completedAt: null,
+  completionTimeMs: null,
+  generationTimeMs: null,
+  interactions: 0,
+  changedFields: [],
+  activityChanges: 0,
+  resultSource: null,
+  requestId: null,
+  successful: false,
+  satisfaction: null
+};
+
+const touchedFields = new Set();
 
 const interests = [
   'Culture & history',
@@ -27,6 +58,41 @@ const services = [
   'Forex'
 ];
 
+const activityTypes = [
+  {
+    type: 'preparation',
+    label: 'Start comfortably',
+    icon: '☕'
+  },
+  {
+    type: 'morning',
+    label: 'Morning experience',
+    icon: '☀'
+  },
+  {
+    type: 'midday',
+    label: 'Lunch & pause',
+    icon: '◐'
+  },
+  {
+    type: 'afternoon',
+    label: 'Afternoon discovery',
+    icon: '✦'
+  },
+  {
+    type: 'evening',
+    label: 'Evening & dinner',
+    icon: '☾'
+  }
+];
+
+const loadingStages = [
+  'Understanding your travel preferences',
+  'Balancing experiences, meals and rest',
+  'Arranging a comfortable day-by-day flow',
+  'Preparing recommendations for expert review'
+];
+
 const places = [
   ['New Delhi', 'India', 'Delhi DEL'],
   ['Mumbai', 'India', 'Bombay BOM'],
@@ -40,7 +106,11 @@ const places = [
   ['Jaipur', 'India', 'JAI'],
   ['Udaipur', 'India', 'UDR'],
   ['Kochi', 'India', 'Cochin Kerala COK'],
-  ['Thiruvananthapuram', 'India', 'Trivandrum Kerala TRV'],
+  [
+    'Thiruvananthapuram',
+    'India',
+    'Trivandrum Kerala TRV'
+  ],
   ['Manali', 'India', 'Himachal Pradesh'],
   ['Shimla', 'India', 'Himachal Pradesh'],
   ['Srinagar', 'India', 'Kashmir SXR'],
@@ -57,11 +127,27 @@ const places = [
   ['Gangtok', 'India', 'Sikkim'],
   ['Shillong', 'India', 'Meghalaya'],
   ['Guwahati', 'India', 'Assam GAU'],
-  ['Port Blair', 'India', 'Andaman Islands IXZ'],
-  ['Kerala', 'India', 'Munnar Alleppey'],
+  [
+    'Port Blair',
+    'India',
+    'Andaman Islands IXZ'
+  ],
+  [
+    'Kerala',
+    'India',
+    'Munnar Alleppey'
+  ],
 
-  ['Dubai', 'United Arab Emirates', 'UAE DXB'],
-  ['Abu Dhabi', 'United Arab Emirates', 'UAE AUH'],
+  [
+    'Dubai',
+    'United Arab Emirates',
+    'UAE DXB'
+  ],
+  [
+    'Abu Dhabi',
+    'United Arab Emirates',
+    'UAE AUH'
+  ],
   ['Bali', 'Indonesia', 'Denpasar DPS'],
   ['Singapore', 'Singapore', 'SIN'],
   ['Bangkok', 'Thailand', 'BKK'],
@@ -69,39 +155,95 @@ const places = [
   ['Krabi', 'Thailand', 'KBV'],
   ['Maldives', 'Maldives', 'Malé MLE'],
   ['Paris', 'France', 'CDG'],
-  ['London', 'United Kingdom', 'England LHR'],
+  [
+    'London',
+    'United Kingdom',
+    'England LHR'
+  ],
   ['Rome', 'Italy', 'FCO'],
   ['Venice', 'Italy', 'VCE'],
   ['Milan', 'Italy', 'MXP'],
-  ['Zurich', 'Switzerland', 'ZRH'],
-  ['Interlaken', 'Switzerland', 'Swiss Alps'],
-  ['Lucerne', 'Switzerland', 'Luzern'],
-  ['Amsterdam', 'Netherlands', 'AMS'],
+  [
+    'Zurich',
+    'Switzerland',
+    'ZRH'
+  ],
+  [
+    'Interlaken',
+    'Switzerland',
+    'Swiss Alps'
+  ],
+  [
+    'Lucerne',
+    'Switzerland',
+    'Luzern'
+  ],
+  [
+    'Amsterdam',
+    'Netherlands',
+    'AMS'
+  ],
   ['Barcelona', 'Spain', 'BCN'],
   ['Madrid', 'Spain', 'MAD'],
   ['Lisbon', 'Portugal', 'LIS'],
   ['Athens', 'Greece', 'ATH'],
   ['Santorini', 'Greece', 'JTR'],
-  ['Istanbul', 'Türkiye', 'Turkey IST'],
+  [
+    'Istanbul',
+    'Türkiye',
+    'Turkey IST'
+  ],
   ['Tokyo', 'Japan', 'NRT HND'],
   ['Kyoto', 'Japan', 'Osaka'],
-  ['Seoul', 'South Korea', 'ICN'],
-  ['Hong Kong', 'Hong Kong', 'HKG'],
-  ['Kuala Lumpur', 'Malaysia', 'KUL'],
+  [
+    'Seoul',
+    'South Korea',
+    'ICN'
+  ],
+  [
+    'Hong Kong',
+    'Hong Kong',
+    'HKG'
+  ],
+  [
+    'Kuala Lumpur',
+    'Malaysia',
+    'KUL'
+  ],
   ['Hanoi', 'Vietnam', 'HAN'],
-  ['Ho Chi Minh City', 'Vietnam', 'Saigon SGN'],
+  [
+    'Ho Chi Minh City',
+    'Vietnam',
+    'Saigon SGN'
+  ],
   ['Da Nang', 'Vietnam', 'DAD'],
   ['Colombo', 'Sri Lanka', 'CMB'],
   ['Kathmandu', 'Nepal', 'KTM'],
   ['Paro', 'Bhutan', 'PBH'],
   ['Sydney', 'Australia', 'SYD'],
   ['Melbourne', 'Australia', 'MEL'],
-  ['Auckland', 'New Zealand', 'AKL'],
-  ['New York', 'United States', 'NYC JFK'],
-  ['Los Angeles', 'United States', 'LAX'],
+  [
+    'Auckland',
+    'New Zealand',
+    'AKL'
+  ],
+  [
+    'New York',
+    'United States',
+    'NYC JFK'
+  ],
+  [
+    'Los Angeles',
+    'United States',
+    'LAX'
+  ],
   ['Toronto', 'Canada', 'YYZ'],
   ['Vancouver', 'Canada', 'YVR'],
-  ['Cape Town', 'South Africa', 'CPT'],
+  [
+    'Cape Town',
+    'South Africa',
+    'CPT'
+  ],
   ['Nairobi', 'Kenya', 'NBO'],
   ['Mauritius', 'Mauritius', 'MRU'],
   ['Seychelles', 'Seychelles', 'SEZ'],
@@ -112,21 +254,38 @@ const places = [
   ['Tbilisi', 'Georgia', 'TBS']
 ];
 
-function createChips(id, values, selectedValues) {
+function createChips(
+  id,
+  values,
+  selectedValues
+) {
   const container = $(id);
+
+  if (!container) {
+    return;
+  }
+
   container.replaceChildren();
 
   values.forEach(value => {
-    const label = document.createElement('label');
+    const label =
+      document.createElement('label');
+
     label.className = 'chip';
 
-    const input = document.createElement('input');
+    const input =
+      document.createElement('input');
+
     input.type = 'checkbox';
     input.name = id;
     input.value = value;
-    input.checked = selectedValues.includes(value);
 
-    const text = document.createElement('span');
+    input.checked =
+      selectedValues.includes(value);
+
+    const text =
+      document.createElement('span');
+
     text.textContent = value;
 
     label.append(input, text);
@@ -134,66 +293,84 @@ function createChips(id, values, selectedValues) {
   });
 }
 
-createChips(
-  'interests',
-  interests,
-  ['Culture & history', 'Food & flavours']
-);
-
-createChips(
-  'services',
-  services,
-  ['Flights', 'Hotels']
-);
-
 function localDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const year =
+    date.getFullYear();
+
+  const month =
+    String(
+      date.getMonth() + 1
+    ).padStart(2, '0');
+
+  const day =
+    String(
+      date.getDate()
+    ).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
 }
 
 function parseDate(value) {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
 
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day, 12);
+  const [
+    year,
+    month,
+    day
+  ] =
+    value
+      .split('-')
+      .map(Number);
+
+  return new Date(
+    year,
+    month - 1,
+    day,
+    12
+  );
 }
 
-const today = new Date();
-const defaultStart = new Date();
-defaultStart.setDate(defaultStart.getDate() + 30);
+function addDays(
+  value,
+  numberOfDays
+) {
+  const date =
+    parseDate(value);
 
-const defaultEnd = new Date(defaultStart);
-defaultEnd.setDate(defaultEnd.getDate() + 5);
+  if (!date) {
+    return null;
+  }
 
-const defaultDates = {
-  start: localDate(defaultStart),
-  end: localDate(defaultEnd)
-};
+  date.setDate(
+    date.getDate() +
+    numberOfDays
+  );
 
-$('start').min = localDate(today);
-$('start').value = defaultDates.start;
-$('end').min = defaultDates.start;
-$('end').value = defaultDates.end;
-$('preferredDate').min = localDate(today);
+  return date;
+}
 
 function normalize(value) {
-  return value
+  return String(value || '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(
+      /[\u0300-\u036f]/g,
+      ''
+    )
     .toLowerCase()
     .trim();
 }
 
 function isIndianPlace(value) {
-  const requestedPlace = normalize(value);
+  const requestedPlace =
+    normalize(value);
 
   return places.some(place => {
     return (
       place[1] === 'India' &&
-      normalize(place[0]) === requestedPlace
+      normalize(place[0]) ===
+        requestedPlace
     );
   });
 }
@@ -209,81 +386,224 @@ function getChecked(name) {
 function getTrip() {
   return {
     type: tripType,
-    origin: $('origin').value.trim(),
-    destination: $('destination').value.trim(),
-    start: $('start').value,
-    end: $('end').value,
-    adults: Number($('adults').value),
-    children: Number($('children').value),
-    budget: Number($('budget').value),
-    budgetType: $('budgetType').value,
-    occasion: $('occasion').value,
-    hotel: $('hotel').value,
-    pace: $('pace').value,
-    interests: getChecked('interests'),
-    services: getChecked('services'),
-    comments: $('comments').value.trim()
+
+    origin:
+      $('origin').value.trim(),
+
+    destination:
+      $('destination').value.trim(),
+
+    start:
+      $('start').value,
+
+    end:
+      $('end').value,
+
+    adults:
+      Number(
+        $('adults').value
+      ),
+
+    children:
+      Number(
+        $('children').value
+      ),
+
+    budget:
+      Number(
+        $('budget').value
+      ),
+
+    budgetType:
+      $('budgetType').value,
+
+    occasion:
+      $('occasion').value,
+
+    hotel:
+      $('hotel').value,
+
+    pace:
+      $('pace').value,
+
+    interests:
+      getChecked(
+        'interests'
+      ),
+
+    services:
+      getChecked(
+        'services'
+      ),
+
+    comments:
+      $('comments')
+        .value
+        .trim()
   };
 }
 
 function tripDays(trip) {
-  const start = parseDate(trip.start);
-  const end = parseDate(trip.end);
+  const start =
+    parseDate(trip.start);
 
-  if (!start || !end) return 0;
+  const end =
+    parseDate(trip.end);
 
-  return Math.round((end - start) / 86400000) + 1;
+  if (!start || !end) {
+    return 0;
+  }
+
+  return Math.round(
+    (end - start) /
+      86400000
+  ) + 1;
 }
 
 function formatCurrency(value) {
-  const amount = Number.isFinite(Number(value))
-    ? Math.round(Number(value))
-    : 0;
+  const amount =
+    Number.isFinite(
+      Number(value)
+    )
+      ? Math.round(
+          Number(value)
+        )
+      : 0;
 
-  return `₹${amount.toLocaleString('en-IN')}`;
+  return `₹${amount.toLocaleString(
+    'en-IN'
+  )}`;
 }
 
-function formatDate(value, includeYear = false) {
-  const date = parseDate(value);
-  if (!date) return '';
+function formatDate(
+  value,
+  includeYear = false
+) {
+  const date =
+    typeof value === 'string'
+      ? parseDate(value)
+      : value;
 
-  return date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    ...(includeYear ? { year: 'numeric' } : {})
-  });
+  if (!date) {
+    return '';
+  }
+
+  return date.toLocaleDateString(
+    'en-GB',
+    {
+      day: 'numeric',
+      month: 'short',
+
+      ...(includeYear
+        ? {
+            year: 'numeric'
+          }
+        : {})
+    }
+  );
+}
+
+function formatDayHeading(date) {
+  if (!date) {
+    return '';
+  }
+
+  return date
+    .toLocaleDateString(
+      'en-GB',
+      {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short'
+      }
+    )
+    .toUpperCase();
 }
 
 function showError(message) {
-  $('error').textContent = message;
+  if ($('error')) {
+    $('error').textContent =
+      message || '';
+  }
+}
+
+function noteInteraction(
+  fieldName
+) {
+  sessionMetrics.interactions += 1;
+
+  if (
+    !sessionMetrics
+      .firstInteractionAt
+  ) {
+    sessionMetrics
+      .firstInteractionAt =
+        new Date().toISOString();
+  }
+
+  if (
+    fieldName &&
+    !touchedFields.has(
+      fieldName
+    )
+  ) {
+    touchedFields.add(
+      fieldName
+    );
+
+    sessionMetrics.changedFields =
+      [...touchedFields];
+  }
 }
 
 function clearDomesticValidity() {
-  $('origin').setCustomValidity('');
-  $('destination').setCustomValidity('');
+  $('origin')
+    .setCustomValidity('');
+
+  $('destination')
+    .setCustomValidity('');
 }
 
-function validateDomesticField(id, displayMessage = false) {
+function validateDomesticField(
+  id,
+  displayMessage = false
+) {
   const input = $(id);
 
-  if (tripType !== 'Domestic' || !input.value.trim()) {
+  if (
+    tripType !== 'Domestic' ||
+    !input.value.trim()
+  ) {
     input.setCustomValidity('');
     return true;
   }
 
-  if (isIndianPlace(input.value)) {
+  if (
+    isIndianPlace(
+      input.value
+    )
+  ) {
     input.setCustomValidity('');
 
-    if ($('error').dataset.locationError === 'true') {
+    if (
+      $('error')?.dataset
+        .locationError ===
+      'true'
+    ) {
       showError('');
-      delete $('error').dataset.locationError;
+
+      delete $('error')
+        .dataset
+        .locationError;
     }
 
     return true;
   }
 
   const fieldName =
-    id === 'origin' ? 'departure city' : 'destination';
+    id === 'origin'
+      ? 'departure city'
+      : 'destination';
 
   input.setCustomValidity(
     `Select an Indian ${fieldName} from the dropdown or switch to International.`
@@ -294,33 +614,51 @@ function validateDomesticField(id, displayMessage = false) {
       `${input.value.trim()} cannot be used in Domestic mode. Select an Indian ${fieldName} from the dropdown, or switch to International.`
     );
 
-    $('error').dataset.locationError = 'true';
+    $('error').dataset
+      .locationError =
+        'true';
   }
 
   return false;
 }
 
 function validateTrip(trip) {
-  const days = tripDays(trip);
+  const days =
+    tripDays(trip);
 
-  if (!trip.origin || !trip.destination) {
+  if (
+    !trip.origin ||
+    !trip.destination
+  ) {
     throw new Error(
       'Please enter both your departure city and destination.'
     );
   }
 
   if (
-    trip.type === 'Domestic' &&
-    (!isIndianPlace(trip.origin) ||
-      !isIndianPlace(trip.destination))
+    trip.type ===
+      'Domestic' &&
+    (
+      !isIndianPlace(
+        trip.origin
+      ) ||
+      !isIndianPlace(
+        trip.destination
+      )
+    )
   ) {
     throw new Error(
       'Domestic trips require Indian locations in both boxes. Select them from the dropdown or switch to International.'
     );
   }
 
-  if (!trip.start || !trip.end) {
-    throw new Error('Please select your travel dates.');
+  if (
+    !trip.start ||
+    !trip.end
+  ) {
+    throw new Error(
+      'Please select your travel dates.'
+    );
   }
 
   if (days < 1) {
@@ -335,249 +673,503 @@ function validateTrip(trip) {
     );
   }
 
-  if (!Number.isInteger(trip.adults) || trip.adults < 1) {
-    throw new Error('At least one adult is required.');
+  if (
+    !Number.isInteger(
+      trip.adults
+    ) ||
+    trip.adults < 1
+  ) {
+    throw new Error(
+      'At least one adult is required.'
+    );
   }
 
-  if (!Number.isInteger(trip.children) || trip.children < 0) {
-    throw new Error('Enter a valid number of children.');
+  if (
+    !Number.isInteger(
+      trip.children
+    ) ||
+    trip.children < 0
+  ) {
+    throw new Error(
+      'Enter a valid number of children.'
+    );
   }
 
-  if (!Number.isFinite(trip.budget) || trip.budget < 1000) {
-    throw new Error('Enter a budget of at least ₹1,000.');
+  if (
+    !Number.isFinite(
+      trip.budget
+    ) ||
+    trip.budget < 1000
+  ) {
+    throw new Error(
+      'Enter a budget of at least ₹1,000.'
+    );
   }
 }
 
 function updateSummary() {
-  const trip = getTrip();
-  const travellers = Math.max(
-    0,
-    trip.adults + trip.children
-  );
+  const trip =
+    getTrip();
+
+  const travellers =
+    Math.max(
+      0,
+      trip.adults +
+        trip.children
+    );
 
   const totalBudget =
-    trip.budgetType === 'person'
-      ? trip.budget * travellers
+    trip.budgetType ===
+      'person'
+      ? trip.budget *
+        travellers
       : trip.budget;
 
-  const days = tripDays(trip);
+  const days =
+    tripDays(trip);
 
-  $('sumDestination').textContent =
-    trip.destination || 'Choose a destination';
+  if ($('sumDestination')) {
+    $('sumDestination')
+      .textContent =
+        trip.destination ||
+        'Choose a destination';
+  }
 
-  $('sumOrigin').textContent =
-    trip.origin || 'Choose a city';
+  if ($('sumOrigin')) {
+    $('sumOrigin')
+      .textContent =
+        trip.origin ||
+        'Choose a city';
+  }
 
-  $('sumDates').textContent =
-    trip.start && trip.end
-      ? `${formatDate(trip.start)} – ${formatDate(
-          trip.end,
-          true
-        )}`
-      : 'Choose dates';
+  if ($('sumDates')) {
+    $('sumDates')
+      .textContent =
+        trip.start &&
+        trip.end
+          ? `${formatDate(
+              trip.start
+            )} – ${formatDate(
+              trip.end,
+              true
+            )}`
+          : 'Choose dates';
+  }
 
-  $('sumTravellers').textContent =
-    `${trip.adults || 0} adult${
-      trip.adults === 1 ? '' : 's'
-    }` +
-    (trip.children
-      ? ` · ${trip.children} ${
-          trip.children === 1 ? 'child' : 'children'
-        }`
-      : '');
+  if ($('sumTravellers')) {
+    $('sumTravellers')
+      .textContent =
+        `${trip.adults || 0} adult${
+          trip.adults === 1
+            ? ''
+            : 's'
+        }` +
+        (
+          trip.children
+            ? ` · ${trip.children} ${
+                trip.children === 1
+                  ? 'child'
+                  : 'children'
+              }`
+            : ''
+        );
+  }
 
-  $('sumStyle').textContent =
-    `${trip.occasion} · ${trip.pace}`;
+  if ($('sumStyle')) {
+    $('sumStyle')
+      .textContent =
+        `${trip.occasion} · ${trip.pace}`;
+  }
 
-  $('sumNights').textContent =
-    days > 0
-      ? `${Math.max(0, days - 1)} night${
-          days - 1 === 1 ? '' : 's'
-        }`
-      : '';
+  if ($('sumNights')) {
+    $('sumNights')
+      .textContent =
+        days > 0
+          ? `${Math.max(
+              0,
+              days - 1
+            )} night${
+              days - 1 === 1
+                ? ''
+                : 's'
+            }`
+          : '';
+  }
 
-  $('sumBudget').textContent = formatCurrency(totalBudget);
+  if ($('sumBudget')) {
+    $('sumBudget')
+      .textContent =
+        formatCurrency(
+          totalBudget
+        );
+  }
 
-  $('sumPerPerson').textContent =
-    travellers > 0
-      ? `${formatCurrency(
-          totalBudget / travellers
-        )} per traveller · budget target, not a quote`
-      : 'Budget target, not a quote';
+  if ($('sumPerPerson')) {
+    $('sumPerPerson')
+      .textContent =
+        travellers > 0
+          ? `${formatCurrency(
+              totalBudget /
+                travellers
+            )} per traveller · budget target, not a quote`
+          : 'Budget target, not a quote';
+  }
 
-  $('end').min = trip.start || localDate(today);
+  $('end').min =
+    trip.start ||
+    localDate(
+      new Date()
+    );
 
   if ($('commentCount')) {
-    $('commentCount').textContent =
-      `${$('comments').value.length} / 2000`;
+    $('commentCount')
+      .textContent =
+        `${
+          $('comments')
+            .value
+            .length
+        } / 2000`;
   }
 }
 
 function setTripType(type) {
   tripType = type;
 
-  document.querySelectorAll('[data-type]').forEach(button => {
-    const selected = button.dataset.type === type;
+  document
+    .querySelectorAll(
+      '[data-type]'
+    )
+    .forEach(button => {
+      const selected =
+        button.dataset.type ===
+        type;
 
-    button.classList.toggle('selected', selected);
-    button.setAttribute('aria-pressed', String(selected));
-  });
+      button.classList.toggle(
+        'selected',
+        selected
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        String(selected)
+      );
+    });
 
   clearDomesticValidity();
   showError('');
 
-  if (type === 'Domestic') {
-    if (!isIndianPlace($('origin').value)) {
-      $('origin').value = 'New Delhi';
+  if (
+    type === 'Domestic'
+  ) {
+    if (
+      !isIndianPlace(
+        $('origin').value
+      )
+    ) {
+      $('origin').value =
+        'New Delhi';
     }
 
-    if (!isIndianPlace($('destination').value)) {
-      $('destination').value = 'Goa';
+    if (
+      !isIndianPlace(
+        $('destination').value
+      )
+    ) {
+      $('destination').value =
+        'Goa';
     }
   } else if (
-    !$('destination').value.trim() ||
-    isIndianPlace($('destination').value)
+    !$('destination')
+      .value
+      .trim() ||
+    isIndianPlace(
+      $('destination').value
+    )
   ) {
-    $('destination').value = 'Dubai';
+    $('destination').value =
+      'Dubai';
   }
 
   updateSummary();
 }
 
-document.querySelectorAll('[data-type]').forEach(button => {
-  button.addEventListener('click', () => {
-    setTripType(button.dataset.type);
-  });
-});
-
-function editDistance(first, second) {
-  let previous = Array.from(
-    { length: second.length + 1 },
-    (_, index) => index
-  );
+function editDistance(
+  first,
+  second
+) {
+  let previous =
+    Array.from(
+      {
+        length:
+          second.length + 1
+      },
+      (_, index) => index
+    );
 
   for (
     let firstIndex = 1;
-    firstIndex <= first.length;
-    firstIndex++
+    firstIndex <=
+      first.length;
+    firstIndex += 1
   ) {
-    const current = [firstIndex];
+    const current = [
+      firstIndex
+    ];
 
     for (
       let secondIndex = 1;
-      secondIndex <= second.length;
-      secondIndex++
+      secondIndex <=
+        second.length;
+      secondIndex += 1
     ) {
-      current[secondIndex] = Math.min(
-        current[secondIndex - 1] + 1,
-        previous[secondIndex] + 1,
-        previous[secondIndex - 1] +
-          (first[firstIndex - 1] ===
-          second[secondIndex - 1]
-            ? 0
-            : 1)
-      );
+      current[secondIndex] =
+        Math.min(
+          current[
+            secondIndex - 1
+          ] + 1,
+
+          previous[
+            secondIndex
+          ] + 1,
+
+          previous[
+            secondIndex - 1
+          ] +
+            (
+              first[
+                firstIndex - 1
+              ] ===
+              second[
+                secondIndex - 1
+              ]
+                ? 0
+                : 1
+            )
+        );
     }
 
     previous = current;
   }
 
-  return previous[second.length];
+  return previous[
+    second.length
+  ];
 }
 
 function findPlaces(query) {
-  const search = normalize(query);
+  const search =
+    normalize(query);
 
   return places
     .filter(place => {
-      return tripType !== 'Domestic' || place[1] === 'India';
+      return (
+        tripType !==
+          'Domestic' ||
+        place[1] === 'India'
+      );
     })
     .map(place => {
-      const name = normalize(place[0]);
-      const fullText = normalize(place.join(' '));
+      const name =
+        normalize(place[0]);
+
+      const fullText =
+        normalize(
+          place.join(' ')
+        );
+
       let score = 100;
 
       if (!search) {
         score = 10;
-      } else if (name === search) {
+      } else if (
+        name === search
+      ) {
         score = 0;
-      } else if (name.startsWith(search)) {
+      } else if (
+        name.startsWith(
+          search
+        )
+      ) {
         score = 1;
       } else if (
         fullText
           .split(/\s+/)
-          .some(word => word.startsWith(search))
+          .some(word => {
+            return word.startsWith(
+              search
+            );
+          })
       ) {
         score = 2;
-      } else if (fullText.includes(search)) {
+      } else if (
+        fullText.includes(
+          search
+        )
+      ) {
         score = 3;
-      } else if (search.length >= 3) {
-        const distance = Math.min(
-          editDistance(search, name),
-          ...name
-            .split(/\s+/)
-            .map(word => editDistance(search, word))
-        );
+      } else if (
+        search.length >= 3
+      ) {
+        const distance =
+          Math.min(
+            editDistance(
+              search,
+              name
+            ),
+
+            ...name
+              .split(/\s+/)
+              .map(word => {
+                return editDistance(
+                  search,
+                  word
+                );
+              })
+          );
 
         if (
           distance <=
-          Math.max(1, Math.floor(search.length / 3))
+          Math.max(
+            1,
+            Math.floor(
+              search.length / 3
+            )
+          )
         ) {
-          score = 4 + distance;
+          score =
+            4 + distance;
         }
       }
 
-      return { place, score };
+      return {
+        place,
+        score
+      };
     })
-    .filter(result => result.score < 100)
+    .filter(result => {
+      return (
+        result.score < 100
+      );
+    })
     .sort(
-      (first, second) =>
-        first.score - second.score ||
-        first.place[0].localeCompare(second.place[0])
+      (
+        first,
+        second
+      ) => {
+        return (
+          first.score -
+            second.score ||
+          first.place[0]
+            .localeCompare(
+              second.place[0]
+            )
+        );
+      }
     )
     .slice(0, 7)
-    .map(result => result.place);
+    .map(result => {
+      return result.place;
+    });
 }
 
 function attachSuggestions(id) {
   const input = $(id);
-  const wrapper = input.parentElement;
+  const wrapper =
+    input.parentElement;
 
-  wrapper.classList.add('place-field');
-  input.removeAttribute('list');
-  input.autocomplete = 'off';
-  input.setAttribute('role', 'combobox');
-  input.setAttribute('aria-autocomplete', 'list');
-  input.setAttribute('aria-expanded', 'false');
+  wrapper.classList.add(
+    'place-field'
+  );
 
-  const optionsBox = document.createElement('div');
-  optionsBox.id = `${id}-suggestions`;
-  optionsBox.className = 'place-options';
-  optionsBox.setAttribute('role', 'listbox');
+  input.removeAttribute(
+    'list'
+  );
+
+  input.autocomplete =
+    'off';
+
+  input.setAttribute(
+    'role',
+    'combobox'
+  );
+
+  input.setAttribute(
+    'aria-autocomplete',
+    'list'
+  );
+
+  input.setAttribute(
+    'aria-expanded',
+    'false'
+  );
+
+  const optionsBox =
+    document.createElement(
+      'div'
+    );
+
+  optionsBox.id =
+    `${id}-suggestions`;
+
+  optionsBox.className =
+    'place-options';
+
+  optionsBox.setAttribute(
+    'role',
+    'listbox'
+  );
+
   optionsBox.hidden = true;
 
-  wrapper.append(optionsBox);
-  input.setAttribute('aria-controls', optionsBox.id);
+  wrapper.append(
+    optionsBox
+  );
+
+  input.setAttribute(
+    'aria-controls',
+    optionsBox.id
+  );
 
   let matches = [];
   let activeIndex = -1;
 
   function close() {
-    optionsBox.hidden = true;
+    optionsBox.hidden =
+      true;
+
     activeIndex = -1;
-    input.setAttribute('aria-expanded', 'false');
-    input.removeAttribute('aria-activedescendant');
+
+    input.setAttribute(
+      'aria-expanded',
+      'false'
+    );
+
+    input.removeAttribute(
+      'aria-activedescendant'
+    );
   }
 
   function select(index) {
-    if (!matches[index]) return;
+    if (!matches[index]) {
+      return;
+    }
 
-    input.value = matches[index][0];
-    input.setCustomValidity('');
+    input.value =
+      matches[index][0];
+
+    input.setCustomValidity(
+      ''
+    );
+
     showError('');
 
     input.dispatchEvent(
-      new Event('input', { bubbles: true })
+      new Event(
+        'input',
+        {
+          bubbles: true
+        }
+      )
     );
 
     close();
@@ -585,191 +1177,319 @@ function attachSuggestions(id) {
   }
 
   function updateActive() {
-    const options =
-      optionsBox.querySelectorAll('[role="option"]');
+    optionsBox
+      .querySelectorAll(
+        '[role="option"]'
+      )
+      .forEach(
+        (
+          option,
+          index
+        ) => {
+          const active =
+            index ===
+            activeIndex;
 
-    options.forEach((option, index) => {
-      const active = index === activeIndex;
-      option.setAttribute('aria-selected', String(active));
+          option.setAttribute(
+            'aria-selected',
+            String(active)
+          );
 
-      if (active) {
-        input.setAttribute(
-          'aria-activedescendant',
-          option.id
-        );
+          if (active) {
+            input.setAttribute(
+              'aria-activedescendant',
+              option.id
+            );
 
-        option.scrollIntoView({ block: 'nearest' });
-      }
-    });
+            option.scrollIntoView({
+              block: 'nearest'
+            });
+          }
+        }
+      );
   }
 
   function show() {
-    matches = findPlaces(input.value);
+    matches =
+      findPlaces(
+        input.value
+      );
+
     activeIndex = -1;
-    optionsBox.replaceChildren();
 
-    matches.forEach((place, index) => {
-      const option = document.createElement('div');
-      option.id = `${optionsBox.id}-${index}`;
-      option.className = 'place-option';
-      option.setAttribute('role', 'option');
-      option.setAttribute('aria-selected', 'false');
+    optionsBox
+      .replaceChildren();
 
-      const name = document.createElement('strong');
-      name.textContent = place[0];
+    matches.forEach(
+      (
+        place,
+        index
+      ) => {
+        const option =
+          document.createElement(
+            'div'
+          );
 
-      const country = document.createElement('small');
-      country.textContent = place[1];
+        option.id =
+          `${optionsBox.id}-${index}`;
 
-      option.append(name, country);
+        option.className =
+          'place-option';
 
-      option.addEventListener('pointerdown', event => {
-        event.preventDefault();
-      });
+        option.setAttribute(
+          'role',
+          'option'
+        );
 
-      option.addEventListener('click', () => {
-        select(index);
-      });
+        option.setAttribute(
+          'aria-selected',
+          'false'
+        );
 
-      optionsBox.append(option);
-    });
+        const name =
+          document.createElement(
+            'strong'
+          );
 
-    const hint = document.createElement('div');
-    hint.className = 'place-hint';
+        name.textContent =
+          place[0];
 
-    if (tripType === 'Domestic') {
-      hint.textContent = matches.length
-        ? 'Indian locations only · select a suggestion'
-        : 'Not an Indian location. Switch to International to search outside India.';
-    } else {
-      hint.textContent = matches.length
-        ? 'Suggested places · you may also enter another location'
-        : 'No close match · you may keep your custom location';
-    }
+        const country =
+          document.createElement(
+            'small'
+          );
 
-    optionsBox.append(hint);
-    optionsBox.hidden = false;
-    input.setAttribute('aria-expanded', 'true');
-  }
+        country.textContent =
+          place[1];
 
-  input.addEventListener('focus', show);
+        option.append(
+          name,
+          country
+        );
 
-  input.addEventListener('input', () => {
-    if (tripType === 'Domestic') {
-      validateDomesticField(id, false);
-    } else {
-      input.setCustomValidity('');
-    }
+        option.addEventListener(
+          'pointerdown',
+          event => {
+            event.preventDefault();
+          }
+        );
 
-    show();
-  });
+        option.addEventListener(
+          'click',
+          () => {
+            select(index);
+          }
+        );
 
-  input.addEventListener('change', () => {
-    validateDomesticField(id, true);
-  });
-
-  input.addEventListener('blur', () => {
-    validateDomesticField(id, true);
-    close();
-  });
-
-  input.addEventListener('keydown', event => {
-    if (event.key === 'Escape') {
-      close();
-      return;
-    }
-
-    if (
-      event.key === 'ArrowDown' ||
-      event.key === 'ArrowUp'
-    ) {
-      event.preventDefault();
-
-      if (optionsBox.hidden) show();
-      if (!matches.length) return;
-
-      const direction =
-        event.key === 'ArrowDown' ? 1 : -1;
-
-      activeIndex =
-        (activeIndex + direction + matches.length) %
-        matches.length;
-
-      updateActive();
-      return;
-    }
-
-    if (
-      event.key === 'Enter' &&
-      !optionsBox.hidden &&
-      activeIndex >= 0
-    ) {
-      event.preventDefault();
-      select(activeIndex);
-    }
-  });
-
-  document.querySelectorAll('[data-type]').forEach(button => {
-    button.addEventListener('click', close);
-  });
-}
-
-attachSuggestions('origin');
-attachSuggestions('destination');
-
-document.querySelectorAll('[data-counter]').forEach(button => {
-  button.addEventListener('click', () => {
-    const input = $(button.dataset.counter);
-    const delta = Number(button.dataset.delta);
-    const minimum = Number(input.min);
-    const maximum = Number(input.max);
-    const current = Number(input.value) || minimum;
-
-    input.value = Math.max(
-      minimum,
-      Math.min(maximum, current + delta)
+        optionsBox.append(
+          option
+        );
+      }
     );
 
-    input.dispatchEvent(
-      new Event('input', { bubbles: true })
+    const hint =
+      document.createElement(
+        'div'
+      );
+
+    hint.className =
+      'place-hint';
+
+    if (
+      tripType ===
+      'Domestic'
+    ) {
+      hint.textContent =
+        matches.length
+          ? 'Indian locations only · select a suggestion'
+          : 'Not an Indian location. Switch to International to search outside India.';
+    } else {
+      hint.textContent =
+        matches.length
+          ? 'Suggested places · you may also enter another location'
+          : 'No close match · you may keep your custom location';
+    }
+
+    optionsBox.append(
+      hint
     );
-  });
-});
 
-form.addEventListener('input', updateSummary);
-form.addEventListener('change', updateSummary);
+    optionsBox.hidden =
+      false;
 
-$('start').addEventListener('change', () => {
-  $('end').min = $('start').value;
-
-  if ($('end').value < $('start').value) {
-    $('end').value = $('start').value;
+    input.setAttribute(
+      'aria-expanded',
+      'true'
+    );
   }
 
-  updateSummary();
-});
-
-function setSystemStatus(type, message) {
-  if (!$('systemStatus') || !$('systemStatusText')) return;
-
-  $('systemStatus').classList.remove(
-    'mock',
-    'gemini',
-    'error'
+  input.addEventListener(
+    'focus',
+    show
   );
 
-  $('systemStatus').classList.add(type);
-  $('systemStatusText').textContent = message;
+  input.addEventListener(
+    'input',
+    () => {
+      if (
+        tripType ===
+        'Domestic'
+      ) {
+        validateDomesticField(
+          id,
+          false
+        );
+      } else {
+        input.setCustomValidity(
+          ''
+        );
+      }
+
+      show();
+    }
+  );
+
+  input.addEventListener(
+    'change',
+    () => {
+      validateDomesticField(
+        id,
+        true
+      );
+    }
+  );
+
+  input.addEventListener(
+    'blur',
+    () => {
+      validateDomesticField(
+        id,
+        true
+      );
+
+      close();
+    }
+  );
+
+  input.addEventListener(
+    'keydown',
+    event => {
+      if (
+        event.key ===
+        'Escape'
+      ) {
+        close();
+        return;
+      }
+
+      if (
+        event.key ===
+          'ArrowDown' ||
+        event.key ===
+          'ArrowUp'
+      ) {
+        event.preventDefault();
+
+        if (
+          optionsBox.hidden
+        ) {
+          show();
+        }
+
+        if (
+          !matches.length
+        ) {
+          return;
+        }
+
+        const direction =
+          event.key ===
+          'ArrowDown'
+            ? 1
+            : -1;
+
+        activeIndex =
+          (
+            activeIndex +
+            direction +
+            matches.length
+          ) %
+          matches.length;
+
+        updateActive();
+        return;
+      }
+
+      if (
+        event.key ===
+          'Enter' &&
+        !optionsBox.hidden &&
+        activeIndex >= 0
+      ) {
+        event.preventDefault();
+        select(activeIndex);
+      }
+    }
+  );
+
+  document
+    .querySelectorAll(
+      '[data-type]'
+    )
+    .forEach(button => {
+      button.addEventListener(
+        'click',
+        close
+      );
+    });
+}
+
+function setSystemStatus(
+  type,
+  message
+) {
+  if (
+    !$('systemStatus') ||
+    !$('systemStatusText')
+  ) {
+    return;
+  }
+
+  $('systemStatus')
+    .classList
+    .remove(
+      'mock',
+      'gemini',
+      'error'
+    );
+
+  $('systemStatus')
+    .classList
+    .add(type);
+
+  $('systemStatusText')
+    .textContent =
+      message;
 }
 
 async function loadStatus() {
   try {
-    const response = await fetch('/api/status');
-    if (!response.ok) throw new Error();
+    const response =
+      await fetch(
+        '/api/status'
+      );
 
-    serverStatus = await response.json();
+    if (!response.ok) {
+      throw new Error();
+    }
 
-    if (serverStatus.mode === 'gemini') {
+    serverStatus =
+      await response.json();
+
+    if (
+      serverStatus.mode ===
+      'gemini'
+    ) {
       setSystemStatus(
         'gemini',
         `Gemini ready · ${serverStatus.geminiRequestsRemaining} API runs remaining`
@@ -788,39 +1508,87 @@ async function loadStatus() {
   }
 }
 
-function cacheKey(trip) {
-  const data = JSON.stringify({
-    model: serverStatus.geminiModel || 'default',
-    schemaVersion: 3,
-    trip: {
-      ...trip,
-      interests: [...trip.interests].sort(),
-      services: [...trip.services].sort()
-    }
-  });
+function hashedCacheKey(
+  trip,
+  schemaVersion,
+  prefix
+) {
+  const data =
+    JSON.stringify({
+      model:
+        serverStatus
+          .geminiModel ||
+        'default',
+
+      schemaVersion,
+
+      trip: {
+        ...trip,
+
+        interests:
+          [
+            ...trip.interests
+          ].sort(),
+
+        services:
+          [
+            ...trip.services
+          ].sort()
+      }
+    });
 
   let hash = 2166136261;
 
-  for (let index = 0; index < data.length; index++) {
-    hash ^= data.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
+  for (
+    let index = 0;
+    index < data.length;
+    index += 1
+  ) {
+    hash ^=
+      data.charCodeAt(
+        index
+      );
+
+    hash =
+      Math.imul(
+        hash,
+        16777619
+      );
   }
 
-  return `${CACHE_PREFIX}${(hash >>> 0).toString(36)}`;
+  return (
+    `${prefix}` +
+    `${(hash >>> 0)
+      .toString(36)}`
+  );
 }
 
-function readCache(trip) {
+function readStoredCache(key) {
   try {
-    const raw = localStorage.getItem(cacheKey(trip));
-    if (!raw) return null;
+    const raw =
+      localStorage.getItem(
+        key
+      );
 
-    const cached = JSON.parse(raw);
+    if (!raw) {
+      return null;
+    }
+
+    const cached =
+      JSON.parse(raw);
 
     if (
-      Date.now() - cached.savedAt > CACHE_TTL ||
-      !cached.result?.days?.length
+      Date.now() -
+        cached.savedAt >
+        CACHE_TTL ||
+      !cached.result
+        ?.days
+        ?.length
     ) {
-      localStorage.removeItem(cacheKey(trip));
+      localStorage.removeItem(
+        key
+      );
+
       return null;
     }
 
@@ -830,14 +1598,69 @@ function readCache(trip) {
   }
 }
 
-function saveCache(trip, result) {
-  if (result.mode !== 'gemini') return;
+function readCache(trip) {
+  const currentKey =
+    hashedCacheKey(
+      trip,
+      4,
+      CACHE_PREFIX
+    );
+
+  const current =
+    readStoredCache(
+      currentKey
+    );
+
+  if (current) {
+    return {
+      result: current,
+      legacy: false
+    };
+  }
+
+  const legacyKey =
+    hashedCacheKey(
+      trip,
+      3,
+      LEGACY_CACHE_PREFIX
+    );
+
+  const legacy =
+    readStoredCache(
+      legacyKey
+    );
+
+  return legacy
+    ? {
+        result: legacy,
+        legacy: true
+      }
+    : null;
+}
+
+function saveCache(
+  trip,
+  result
+) {
+  if (
+    result.mode !==
+    'gemini'
+  ) {
+    return;
+  }
 
   try {
     localStorage.setItem(
-      cacheKey(trip),
+      hashedCacheKey(
+        trip,
+        4,
+        CACHE_PREFIX
+      ),
+
       JSON.stringify({
-        savedAt: Date.now(),
+        savedAt:
+          Date.now(),
+
         result
       })
     );
@@ -846,41 +1669,621 @@ function saveCache(trip, result) {
   }
 }
 
-function renderList(id, values, fallback) {
+function renderList(
+  id,
+  values,
+  fallback
+) {
   const container = $(id);
-  if (!container) return;
 
-  container.replaceChildren();
+  if (!container) {
+    return;
+  }
+
+  container
+    .replaceChildren();
 
   const items =
-    Array.isArray(values) && values.length
+    Array.isArray(values) &&
+    values.length
       ? values
       : [fallback];
 
   items.forEach(value => {
-    const item = document.createElement('li');
+    const item =
+      document.createElement(
+        'li'
+      );
+
     item.textContent = value;
+
     container.append(item);
   });
 }
 
-function setLoading(loading) {
+function startLoading() {
+  let stageIndex = 0;
+  let progress = 18;
+
+  if ($('resultContent')) {
+    $('resultContent').hidden =
+      true;
+  }
+
   if ($('resultsLoading')) {
-    $('resultsLoading').hidden = !loading;
+    $('resultsLoading').hidden =
+      false;
+  }
+
+  if ($('loadingStage')) {
+    $('loadingStage').textContent =
+      loadingStages[0];
+  }
+
+  if ($('loadingProgress')) {
+    $('loadingProgress')
+      .style.width =
+        `${progress}%`;
+  }
+
+  clearInterval(
+    loadingTimer
+  );
+
+  loadingTimer =
+    setInterval(
+      () => {
+        stageIndex =
+          Math.min(
+            stageIndex + 1,
+            loadingStages.length - 1
+          );
+
+        progress =
+          Math.min(
+            progress + 22,
+            88
+          );
+
+        if ($('loadingStage')) {
+          $('loadingStage')
+            .textContent =
+              loadingStages[
+                stageIndex
+              ];
+        }
+
+        if (
+          $('loadingProgress')
+        ) {
+          $('loadingProgress')
+            .style.width =
+              `${progress}%`;
+        }
+      },
+      1100
+    );
+}
+
+function stopLoading() {
+  clearInterval(
+    loadingTimer
+  );
+
+  loadingTimer = null;
+
+  if ($('loadingProgress')) {
+    $('loadingProgress')
+      .style.width =
+        '100%';
+  }
+
+  if ($('resultsLoading')) {
+    $('resultsLoading').hidden =
+      true;
   }
 
   if ($('resultContent')) {
-    $('resultContent').hidden = loading;
+    $('resultContent').hidden =
+      false;
   }
+}
+
+function activityMeta(
+  item,
+  itemIndex
+) {
+  const fallback =
+    activityTypes[itemIndex] ||
+    {
+      type: 'activity',
+      label:
+        `Activity ${itemIndex + 1}`,
+      icon: '✦'
+    };
+
+  return (
+    activityTypes.find(
+      entry => {
+        return (
+          entry.type ===
+          item?.type
+        );
+      }
+    ) ||
+    fallback
+  );
+}
+
+function normalizeActivity(
+  rawItem,
+  itemIndex
+) {
+  if (
+    typeof rawItem ===
+    'string'
+  ) {
+    const legacyTimes = [
+      '9:00 AM',
+      '1:30 PM',
+      '6:30 PM'
+    ];
+
+    return {
+      type:
+        activityTypes[
+          itemIndex
+        ]?.type ||
+        'activity',
+
+      time:
+        legacyTimes[
+          itemIndex
+        ] ||
+        'Time to confirm',
+
+      title:
+        activityTypes[
+          itemIndex
+        ]?.label ||
+        `Activity ${itemIndex + 1}`,
+
+      description:
+        rawItem
+    };
+  }
+
+  return {
+    type:
+      rawItem?.type ||
+      activityTypes[
+        itemIndex
+      ]?.type ||
+      'activity',
+
+    time:
+      rawItem?.time ||
+      'Time to confirm',
+
+    title:
+      rawItem?.title ||
+      `Activity ${itemIndex + 1}`,
+
+    description:
+      rawItem?.description ||
+      'To be refined with your Trackworld travel expert.'
+  };
+}
+
+function updateChoiceSummary() {
+  if ($('choiceSummary')) {
+    $('choiceSummary').textContent =
+      'Review your preliminary schedule, then let a Trackworld expert refine every detail.';
+  }
+}
+
+function createActivityCard(
+  item,
+  _dayIndex,
+  itemIndex
+) {
+  const meta = activityMeta(
+    item,
+    itemIndex
+  );
+
+  const card = document.createElement(
+    'article'
+  );
+
+  card.className =
+    `schedule-card ` +
+    `schedule-card-${itemIndex + 1} ` +
+    `activity-${meta.type}`;
+
+  const top = document.createElement(
+    'div'
+  );
+
+  top.className = 'schedule-card-top';
+
+  const identity = document.createElement(
+    'div'
+  );
+
+  identity.className = 'activity-identity';
+
+  const icon = document.createElement(
+    'span'
+  );
+
+  icon.className = 'activity-icon';
+
+  icon.setAttribute(
+    'aria-hidden',
+    'true'
+  );
+
+  icon.textContent = meta.icon;
+
+  const identityText =
+    document.createElement('span');
+
+  identityText.textContent =
+    meta.label;
+
+  identity.append(
+    icon,
+    identityText
+  );
+
+  const activityNumber =
+    document.createElement('span');
+
+  activityNumber.className =
+    'activity-number';
+
+  activityNumber.textContent =
+    String(itemIndex + 1).padStart(
+      2,
+      '0'
+    );
+
+  top.append(
+    identity,
+    activityNumber
+  );
+
+  const time = document.createElement(
+    'time'
+  );
+
+  time.className = 'activity-time';
+  time.textContent = item.time;
+
+  const title = document.createElement(
+    'h4'
+  );
+
+  title.textContent = item.title;
+
+  const description =
+    document.createElement('p');
+
+  description.textContent =
+    item.description;
+
+  card.append(
+    top,
+    time,
+    title,
+    description
+  );
+
+  return card;
+}
+
+function buildDayNavigation(days) {
+  const navigation =
+    $('dayNavigation');
+
+  if (!navigation) {
+    return;
+  }
+
+  navigation
+    .replaceChildren();
+
+  days.forEach(
+    (
+      _day,
+      index
+    ) => {
+      const link =
+        document.createElement(
+          'a'
+        );
+
+      link.href =
+        `#day-${index + 1}`;
+
+      link.dataset.dayTarget =
+        String(index + 1);
+
+      link.textContent =
+        `Day ${index + 1}`;
+
+      if (index === 0) {
+        link.classList.add(
+          'active'
+        );
+      }
+
+      link.addEventListener(
+        'click',
+        event => {
+          event.preventDefault();
+
+          const target =
+            $(
+              `day-${index + 1}`
+            );
+
+          if (target) {
+            target.open = true;
+
+            target.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        }
+      );
+
+      navigation.append(
+        link
+      );
+    }
+  );
+
+  dayObserver?.disconnect();
+
+  dayObserver =
+    new IntersectionObserver(
+      entries => {
+        const visible =
+          entries
+            .filter(entry => {
+              return (
+                entry
+                  .isIntersecting
+              );
+            })
+            .sort(
+              (
+                first,
+                second
+              ) => {
+                return (
+                  second
+                    .intersectionRatio -
+                  first
+                    .intersectionRatio
+                );
+              }
+            )[0];
+
+        if (!visible) {
+          return;
+        }
+
+        const number =
+          visible
+            .target
+            .id
+            .replace(
+              'day-',
+              ''
+            );
+
+        navigation
+          .querySelectorAll(
+            'a'
+          )
+          .forEach(link => {
+            link.classList.toggle(
+              'active',
+              link.dataset
+                .dayTarget ===
+                number
+            );
+          });
+      },
+      {
+        rootMargin:
+          '-25% 0px -60% 0px',
+
+        threshold: [
+          0.05,
+          0.25
+        ]
+      }
+    );
+
+  document
+    .querySelectorAll(
+      '.day'
+    )
+    .forEach(day => {
+      dayObserver.observe(
+        day
+      );
+    });
+}
+
+function updateResultOverview(
+  trip,
+  result
+) {
+  const totalBudget =
+    trip.budgetType ===
+      'person'
+      ? trip.budget *
+        (
+          trip.adults +
+          trip.children
+        )
+      : trip.budget;
+
+  const numberOfDays =
+    result.days.length;
+
+  const travellers =
+    trip.adults +
+    trip.children;
+
+  if ($('overviewRoute')) {
+    $('overviewRoute')
+      .textContent =
+        `${trip.origin} → ${trip.destination}`;
+  }
+
+  if ($('overviewDuration')) {
+    $('overviewDuration')
+      .textContent =
+        `${numberOfDays} day${
+          numberOfDays === 1
+            ? ''
+            : 's'
+        } · ` +
+        `${Math.max(
+          0,
+          numberOfDays - 1
+        )} night${
+          numberOfDays - 1 === 1
+            ? ''
+            : 's'
+        }`;
+  }
+
+  if ($('overviewTravellers')) {
+    $('overviewTravellers')
+      .textContent =
+        `${travellers} traveller${
+          travellers === 1
+            ? ''
+            : 's'
+        }`;
+  }
+
+  if ($('overviewBudget')) {
+    $('overviewBudget')
+      .textContent =
+        formatCurrency(
+          totalBudget
+        );
+  }
+
+  if ($('overviewPace')) {
+    $('overviewPace')
+      .textContent =
+        `${trip.pace} · ${trip.hotel}`;
+  }
+
+  if ($('overviewDates')) {
+    $('overviewDates')
+      .textContent =
+        `${formatDate(
+          trip.start
+        )} – ${formatDate(
+          trip.end,
+          true
+        )}`;
+  }
+}
+
+function sourceDescription(
+  result,
+  browserCached,
+  legacyCached
+) {
+  if (browserCached) {
+    return legacyCached
+      ? 'Earlier browser cache · no API run used'
+      : 'Browser cache · no API run used';
+  }
+
+  if (result.cached) {
+    return (
+      'Server cache · ' +
+      'no new API run used'
+    );
+  }
+
+  return (
+    result.mode === 'gemini'
+      ? 'Gemini API'
+      : 'Local mock data'
+  );
+}
+
+function renderMetrics() {
+  const seconds =
+    sessionMetrics
+      .completionTimeMs == null
+      ? '—'
+      : `${(
+          sessionMetrics
+            .completionTimeMs /
+          1000
+        ).toFixed(1)} sec`;
+
+  if ($('metricTime')) {
+    $('metricTime')
+      .textContent =
+        seconds;
+  }
+
+  if ($('metricInteractions')) {
+    $('metricInteractions')
+      .textContent =
+        String(
+          sessionMetrics
+            .interactions
+        );
+  }
+
+  if ($('metricSource')) {
+    $('metricSource')
+      .textContent =
+        sessionMetrics
+          .resultSource ||
+        '—';
+  }
+
+  if ($('metricChanges')) {
+    $('metricChanges')
+      .textContent =
+        String(
+          sessionMetrics
+            .activityChanges
+        );
+  }
+}
+
+function saveMetrics() {
+  // Module measurement has been disabled.
 }
 
 function renderItinerary(
   trip,
   result,
-  browserCached = false
+  options = {}
 ) {
   if (
-    !Array.isArray(result.days) ||
+    !Array.isArray(
+      result.days
+    ) ||
     !result.days.length
   ) {
     throw new Error(
@@ -888,257 +2291,302 @@ function renderItinerary(
     );
   }
 
+  const {
+    browserCached = false,
+    legacyCached = false
+  } = options;
+
   generatedTrip = {
     ...trip,
     result
   };
 
-  $('resultTitle').textContent =
-    result.tripTitle ||
-    `${result.days.length} days in ${trip.destination}`;
 
-  $('resultSummary').textContent =
-    result.summary ||
-    `${trip.occasion} with a ${trip.pace.toLowerCase()} pace.`;
+
+  updateChoiceSummary();
+
+  $('resultTitle')
+    .textContent =
+      result.tripTitle ||
+      `${result.days.length} days in ${trip.destination}`;
+
+  $('resultSummary')
+    .textContent =
+      result.summary ||
+      `${trip.occasion} with a ${trip.pace.toLowerCase()} pace.`;
 
   if ($('resultSource')) {
-    $('resultSource').textContent =
-      result.mode === 'gemini'
-        ? 'Gemini AI itinerary'
-        : 'Mock itinerary';
+    $('resultSource')
+      .textContent =
+        result.mode ===
+        'gemini'
+          ? 'Gemini AI itinerary'
+          : 'Mock itinerary';
   }
 
+  const source =
+    sourceDescription(
+      result,
+      browserCached,
+      legacyCached
+    );
+
   if ($('cacheStatus')) {
-    if (browserCached) {
-      $('cacheStatus').textContent =
-        'Browser cache · no API run used';
+    $('cacheStatus')
+      .textContent =
+        source;
 
-      $('cacheStatus').hidden = false;
-    } else if (result.cached) {
-      $('cacheStatus').textContent =
-        'Server cache · no new API run used';
-
-      $('cacheStatus').hidden = false;
-    } else {
-      $('cacheStatus').hidden = true;
-    }
+    $('cacheStatus').hidden =
+      false;
   }
 
   if ($('resultNotice')) {
-    $('resultNotice').textContent =
-      result.mode === 'gemini'
-        ? 'AI-generated preliminary itinerary. Prices, availability, routes, opening hours and visa requirements require expert verification.'
-        : 'Mock itinerary generated locally. No Gemini API request was used.';
+    $('resultNotice')
+      .textContent =
+        result.mode ===
+        'gemini'
+          ? 'AI-generated preliminary itinerary. Prices, availability, routes, opening hours and visa requirements require expert verification.'
+          : 'Mock itinerary generated locally. No Gemini API request was used.';
   }
 
-  const totalBudget =
-    trip.budgetType === 'person'
-      ? trip.budget *
-        (trip.adults + trip.children)
-      : trip.budget;
+  updateResultOverview(
+    trip,
+    result
+  );
 
-  if ($('overviewRoute')) {
-    $('overviewRoute').textContent =
-      `${trip.origin} → ${trip.destination}`;
-  }
+  $('days')
+    .replaceChildren();
 
-  if ($('overviewDuration')) {
-    const numberOfDays = result.days.length;
-    const numberOfNights =
-      Math.max(0, numberOfDays - 1);
+  result.days.forEach(
+    (
+      day,
+      dayIndex
+    ) => {
+      const details =
+        document.createElement(
+          'details'
+        );
 
-    $('overviewDuration').textContent =
-      `${numberOfDays} day${
-        numberOfDays === 1 ? '' : 's'
-      } · ${numberOfNights} night${
-        numberOfNights === 1 ? '' : 's'
-      }`;
-  }
+      details.className =
+        'day';
 
-  if ($('overviewTravellers')) {
-    const travellerCount =
-      trip.adults + trip.children;
+      details.id =
+        `day-${dayIndex + 1}`;
 
-    $('overviewTravellers').textContent =
-      `${travellerCount} traveller${
-        travellerCount === 1 ? '' : 's'
-      }`;
-  }
+      details.open =
+        dayIndex < 2;
 
-  if ($('overviewBudget')) {
-    $('overviewBudget').textContent =
-      formatCurrency(totalBudget);
-  }
-
-  if ($('overviewPace')) {
-    $('overviewPace').textContent =
-      `${trip.pace} · ${trip.hotel}`;
-  }
-
-  $('days').replaceChildren();
-
-  const legacyTimes = [
-    '9:00 AM',
-    '1:30 PM',
-    '6:30 PM'
-  ];
-
-  const legacyTitles = [
-    'Morning experience',
-    'Afternoon experience',
-    'Evening experience'
-  ];
-
-  result.days.forEach((day, dayIndex) => {
-    const details =
-      document.createElement('details');
-
-    details.className = 'day';
-    details.open = dayIndex < 2;
-
-    details.style.setProperty(
-      '--day-number',
-      `"${String(dayIndex + 1).padStart(2, '0')}"`
-    );
-
-    const heading =
-      document.createElement('summary');
-
-    const dayNumber =
-      document.createElement('span');
-
-    dayNumber.className = 'day-label';
-
-    dayNumber.textContent =
-      `DAY ${String(dayIndex + 1).padStart(2, '0')}`;
-
-    const dayTitle =
-      document.createElement('strong');
-
-    dayTitle.className = 'day-title';
-
-    dayTitle.textContent =
-      day.title ||
-      `Day ${dayIndex + 1}`;
-
-    heading.append(
-      dayNumber,
-      dayTitle
-    );
-
-    const schedule =
-      document.createElement('div');
-
-    schedule.className =
-      'schedule timed-schedule';
-
-    const items =
-      Array.isArray(day.items)
-        ? day.items
-        : [];
-
-    items.forEach(
-      (rawItem, itemIndex) => {
-        const item =
-          typeof rawItem === 'string'
-            ? {
-                time:
-                  legacyTimes[itemIndex] ||
-                  `${itemIndex + 1}:00 PM`,
-
-                title:
-                  legacyTitles[itemIndex] ||
-                  `Activity ${itemIndex + 1}`,
-
-                description: rawItem
-              }
-            : rawItem;
-
-        const card =
-          document.createElement('article');
-
-        card.className =
-          `schedule-card schedule-card-${
-            itemIndex + 1
-          }`;
-
-        const time =
-          document.createElement('time');
-
-        time.className = 'activity-time';
-        time.textContent =
-          item.time ||
-          'Time to confirm';
-
-        const activityNumber =
-          document.createElement('span');
-
-        activityNumber.className =
-          'activity-number';
-
-        activityNumber.textContent =
-          String(itemIndex + 1).padStart(
+      details.style
+        .setProperty(
+          '--day-number',
+          `"${String(
+            dayIndex + 1
+          ).padStart(
             2,
             '0'
+          )}"`
+        );
+
+      const normalizedItems =
+        (
+          Array.isArray(
+            day.items
+          )
+            ? day.items
+            : []
+        ).map(
+          (
+            item,
+            itemIndex
+          ) => {
+            return normalizeActivity(
+              item,
+              itemIndex
+            );
+          }
+        );
+
+      const firstTime =
+        normalizedItems[0]
+          ?.time ||
+        'Time to confirm';
+
+      const lastTime =
+        normalizedItems.at(-1)
+          ?.time ||
+        'Time to confirm';
+
+      const date =
+        addDays(
+          trip.start,
+          dayIndex
+        );
+
+      const heading =
+        document.createElement(
+          'summary'
+        );
+
+      const headingMain =
+        document.createElement(
+          'span'
+        );
+
+      headingMain.className =
+        'day-heading-main';
+
+      const dayLabel =
+        document.createElement(
+          'span'
+        );
+
+      dayLabel.className =
+        'day-label';
+
+      dayLabel.textContent =
+        `DAY ${String(
+          dayIndex + 1
+        ).padStart(
+          2,
+          '0'
+        )}`;
+
+      const dayCopy =
+        document.createElement(
+          'span'
+        );
+
+      dayCopy.className =
+        'day-copy';
+
+      const dateLine =
+        document.createElement(
+          'span'
+        );
+
+      dateLine.className =
+        'day-date';
+
+      dateLine.textContent =
+        formatDayHeading(
+          date
+        );
+
+      const title =
+        document.createElement(
+          'strong'
+        );
+
+      title.className =
+        'day-title';
+
+      title.textContent =
+        day.title ||
+        `Day ${dayIndex + 1}`;
+
+      const area =
+        document.createElement(
+          'span'
+        );
+
+      area.className =
+        'day-area';
+
+      area.textContent =
+        `⌖ ${
+          day.area ||
+          trip.destination
+        }`;
+
+      dayCopy.append(
+        dateLine,
+        title,
+        area
+      );
+
+      headingMain.append(
+        dayLabel,
+        dayCopy
+      );
+
+      const dayMeta =
+        document.createElement(
+          'span'
+        );
+
+      dayMeta.className =
+        'day-meta';
+
+      dayMeta.textContent =
+        `${normalizedItems.length} activities · ` +
+        `${firstTime}–${lastTime} · ` +
+        `${trip.pace}`;
+
+      heading.append(
+        headingMain,
+        dayMeta
+      );
+
+      const schedule =
+        document.createElement(
+          'div'
+        );
+
+      schedule.className =
+        'schedule timed-schedule';
+
+      normalizedItems.forEach(
+        (
+          item,
+          itemIndex
+        ) => {
+          schedule.append(
+            createActivityCard(
+              item,
+              dayIndex,
+              itemIndex
+            )
+          );
+        }
+      );
+
+      details.append(
+        heading,
+        schedule
+      );
+
+      if (day.note) {
+        const note =
+          document.createElement(
+            'p'
           );
 
-        const cardTop =
-          document.createElement('div');
+        note.className =
+          'day-note';
 
-        cardTop.className =
-          'schedule-card-top';
+        note.textContent =
+          day.note;
 
-        cardTop.append(
-          time,
-          activityNumber
+        details.append(
+          note
         );
-
-        const activityTitle =
-          document.createElement('h4');
-
-        activityTitle.textContent =
-          item.title ||
-          `Activity ${itemIndex + 1}`;
-
-        const description =
-          document.createElement('p');
-
-        description.textContent =
-          item.description ||
-          'To be refined with your Trackworld travel expert.';
-
-        card.append(
-          cardTop,
-          activityTitle,
-          description
-        );
-
-        schedule.append(card);
       }
-    );
 
-    details.append(
-      heading,
-      schedule
-    );
-
-    if (day.note) {
-      const note =
-        document.createElement('p');
-
-      note.className = 'day-note';
-      note.textContent = day.note;
-
-      details.append(note);
+      $('days').append(
+        details
+      );
     }
+  );
 
-    $('days').append(details);
-  });
+  buildDayNavigation(
+    result.days
+  );
 
   if ($('budgetGuidance')) {
-    $('budgetGuidance').textContent =
-      result.budgetGuidance ||
-      'The stated budget is a planning target. Final costs depend on availability and confirmed selections.';
+    $('budgetGuidance')
+      .textContent =
+        result.budgetGuidance ||
+        'The stated budget is a planning target. Final costs depend on availability and confirmed selections.';
   }
 
   renderList(
@@ -1153,359 +2601,1145 @@ function renderItinerary(
     'All arrangements require expert verification before booking.'
   );
 
-  $('preferences').textContent =
-    `Interests: ${
-      trip.interests.join(', ') ||
-      'Open to suggestions'
-    }. Services: ${
-      trip.services.join(', ') ||
-      'None selected'
-    }.` +
-    (
-      trip.comments
-        ? ` Additional requirements: ${trip.comments}`
-        : ''
-    );
+  if ($('preferences')) {
+    $('preferences')
+      .textContent =
+        `Interests: ${
+          trip.interests.join(
+            ', '
+          ) ||
+          'Open to suggestions'
+        }. Services: ${
+          trip.services.join(
+            ', '
+          ) ||
+          'None selected'
+        }.` +
+        (
+          trip.comments
+            ? ` Additional requirements: ${trip.comments}`
+            : ''
+        );
+  }
 
-  setLoading(false);
-  $('results').hidden = false;
+  stopLoading();
 
-  $('results').scrollIntoView({
-    behavior: 'smooth',
-    block: 'start'
-  });
+  $('results').hidden =
+    false;
+
+  sessionMetrics.completedAt =
+    new Date().toISOString();
+
+  sessionMetrics.completionTimeMs =
+    sessionMetrics
+      .firstInteractionAt
+      ? Date.now() -
+        Date.parse(
+          sessionMetrics
+            .firstInteractionAt
+        )
+      : null;
+
+  sessionMetrics.resultSource =
+    source;
+
+  sessionMetrics.requestId =
+    result.requestId ||
+    null;
+
+  sessionMetrics.successful =
+    true;
+
+  renderMetrics();
+  saveMetrics();
+
+  $('results')
+    .scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
 }
 
-form.addEventListener('submit', async event => {
-  event.preventDefault();
-  showError('');
 
-  const trip = getTrip();
+function itineraryReference(trip) {
+  const destination =
+    normalize(
+      trip.destination
+    )
+      .replace(
+        /[^a-z]/g,
+        ''
+      )
+      .slice(0, 3)
+      .toUpperCase() ||
+    'TRP';
 
-  try {
-    validateTrip(trip);
-  } catch (error) {
-    showError(error.message);
-    return;
+  const date =
+    trip.start
+      .replaceAll(
+        '-',
+        ''
+      )
+      .slice(2);
+
+  const request =
+    generatedTrip
+      ?.result
+      ?.requestId
+      ?.slice(0, 4)
+      .toUpperCase() ||
+    'PLAN';
+
+  return (
+    `TW-${destination}-` +
+    `${date}-${request}`
+  );
+}
+
+function itineraryAsText() {
+  if (!generatedTrip) {
+    return '';
   }
 
-  if (!form.reportValidity()) return;
+  const {
+    result,
+    ...trip
+  } = generatedTrip;
 
-  const button = $('generate');
-  const originalContent = button.innerHTML;
+  const lines = [
+    'TRACKWORLD PRELIMINARY ITINERARY',
+    itineraryReference(
+      trip
+    ),
+    '',
+    result.tripTitle,
+    result.summary,
+    '',
+    `Route: ${trip.origin} to ${trip.destination}`,
+    `Dates: ${trip.start} to ${trip.end}`,
+    `Pace: ${trip.pace}`,
+    ''
+  ];
 
-  button.disabled = true;
-  button.textContent = 'Creating your itinerary…';
-
-  try {
-    $('results').hidden = false;
-    setLoading(true);
-
-    if (serverStatus.mode === 'gemini') {
-      const cached = readCache(trip);
-
-      if (cached) {
-        renderItinerary(trip, cached, true);
-        return;
-      }
-    }
-
-    const response = await fetch(
-      '/api/generate-itinerary',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        body: JSON.stringify(trip)
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        result.error ||
-        'The itinerary could not be generated.'
+  result.days.forEach(
+    (
+      day,
+      dayIndex
+    ) => {
+      lines.push(
+        `DAY ${dayIndex + 1} — ${formatDayHeading(
+          addDays(
+            trip.start,
+            dayIndex
+          )
+        )}`
       );
-    }
 
-    saveCache(trip, result);
-    renderItinerary(trip, result);
-
-    if (
-      result.mode === 'gemini' &&
-      Number.isFinite(result.geminiRequestsRemaining)
-    ) {
-      setSystemStatus(
-        'gemini',
-        `Gemini ready · ${result.geminiRequestsRemaining} API runs remaining`
+      lines.push(
+        day.title
       );
+
+      lines.push(
+        `Area: ${
+          day.area ||
+          trip.destination
+        }`
+      );
+
+      (
+        day.items || []
+      ).forEach(
+        (
+          rawItem,
+          itemIndex
+        ) => {
+          const item =
+            normalizeActivity(
+              rawItem,
+              itemIndex
+            );
+
+          lines.push(
+            `${item.time} — ${item.title}`
+          );
+
+          lines.push(
+            item.description
+          );
+        }
+      );
+
+      if (day.note) {
+        lines.push(
+          `Note: ${day.note}`
+        );
+      }
+
+      lines.push('');
     }
-  } catch (error) {
-    setLoading(false);
-    $('results').hidden = true;
-
-    showError(
-      error.message ||
-      'The itinerary could not be generated.'
-    );
-  } finally {
-    button.disabled = false;
-    button.innerHTML = originalContent;
-  }
-});
-
-$('itineraryLink').addEventListener('click', event => {
-  if ($('results').hidden) {
-    event.preventDefault();
-
-    showError(
-      'Complete the form and create your itinerary first.'
-    );
-
-    $('generate').focus();
-  }
-});
-
-$('print').addEventListener('click', () => {
-  document.querySelectorAll('.day').forEach(day => {
-    day.open = true;
-  });
-
-  window.print();
-});
-
-document.querySelectorAll('.appointment').forEach(button => {
-  button.addEventListener('click', () => {
-    const trip = generatedTrip || getTrip();
-
-    $('appointmentStatus').textContent = '';
-    $('downloadRequest').hidden = true;
-
-    if ($('appointmentTripSummary')) {
-      $('appointmentTripSummary').textContent =
-        `${trip.origin || 'Departure city'} to ${
-          trip.destination || 'destination'
-        }`;
-    }
-
-    $('appointmentDialog').showModal();
-  });
-});
-
-$('closeDialog').addEventListener('click', () => {
-  $('appointmentDialog').close();
-});
-
-$('appointmentDialog').addEventListener('click', event => {
-  if (event.target === $('appointmentDialog')) {
-    $('appointmentDialog').close();
-  }
-});
-
-$('appointmentForm').addEventListener('submit', event => {
-  event.preventDefault();
-
-  if (!$('appointmentForm').reportValidity()) return;
-
-  const trip = generatedTrip || getTrip();
-  const travellers = trip.adults + trip.children;
-
-  const totalBudget =
-    trip.budgetType === 'person'
-      ? trip.budget * travellers
-      : trip.budget;
-
-  appointmentRequest =
-    `TRACKWORLD CONSULTATION REQUEST — NOT SENT\n\n` +
-    `Name: ${$('customerName').value.trim()}\n` +
-    `Email: ${$('email').value.trim()}\n` +
-    `Phone: ${$('phone')?.value.trim() || 'Not provided'}\n` +
-    `Preferred date: ${$('preferredDate').value}\n` +
-    `Preferred time: ${
-      $('preferredTime')?.value || 'No preference'
-    }\n\n` +
-    `Trip type: ${trip.type}\n` +
-    `Route: ${trip.origin} to ${trip.destination}\n` +
-    `Dates: ${trip.start} to ${trip.end}\n` +
-    `Travellers: ${trip.adults} adults, ${trip.children} children\n` +
-    `Occasion: ${trip.occasion}\n` +
-    `Stay: ${trip.hotel}\n` +
-    `Pace: ${trip.pace}\n` +
-    `Budget target: ${formatCurrency(totalBudget)}\n` +
-    `Interests: ${trip.interests.join(', ') || 'Open'}\n` +
-    `Services: ${trip.services.join(', ') || 'None'}\n` +
-    `Requirements: ${trip.comments || 'None'}\n\n` +
-    `Nothing has been sent, booked or reserved.`;
-
-  $('appointmentStatus').textContent =
-    'Your request is ready. Nothing has been sent or reserved.';
-
-  $('downloadRequest').hidden = false;
-});
-
-$('downloadRequest').addEventListener('click', () => {
-  if (!appointmentRequest) return;
-
-  const url = URL.createObjectURL(
-    new Blob([appointmentRequest], {
-      type: 'text/plain;charset=utf-8'
-    })
   );
 
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'Trackworld-consultation-request.txt';
+  lines.push(
+    'Preliminary planning only. All arrangements require Trackworld expert verification.'
+  );
 
-  document.body.append(link);
+  return lines.join(
+    '\n'
+  );
+}
+
+function downloadText(
+  filename,
+  content
+) {
+  const url =
+    URL.createObjectURL(
+      new Blob(
+        [content],
+        {
+          type:
+            'text/plain;charset=utf-8'
+        }
+      )
+    );
+
+  const link =
+    document.createElement(
+      'a'
+    );
+
+  link.href = url;
+  link.download = filename;
+
+  document.body.append(
+    link
+  );
+
   link.click();
   link.remove();
 
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-});
+  setTimeout(
+    () => {
+      URL.revokeObjectURL(
+        url
+      );
+    },
+    1000
+  );
+}
 
-form.addEventListener('reset', () => {
-  setTimeout(() => {
-    tripType = 'International';
+async function copyItinerarySummary() {
+  if (!generatedTrip) {
+    return;
+  }
 
-    document.querySelectorAll('[data-type]').forEach(button => {
-      const selected =
-        button.dataset.type === 'International';
+  const text =
+    itineraryAsText();
 
-      button.classList.toggle('selected', selected);
-      button.setAttribute('aria-pressed', String(selected));
-    });
+  try {
+    await navigator
+      .clipboard
+      .writeText(text);
 
-    $('start').value = defaultDates.start;
-    $('end').value = defaultDates.end;
-    $('end').min = defaultDates.start;
+    if ($('copyStatus')) {
+      $('copyStatus')
+        .textContent =
+          'Itinerary summary copied.';
+    }
+  } catch {
+    if ($('copyStatus')) {
+      $('copyStatus')
+        .textContent =
+          'Copy unavailable. Use Download itinerary instead.';
+    }
+  }
+}
 
-    clearDomesticValidity();
-    showError('');
+function prepareAppointmentDialog() {
+  const trip =
+    generatedTrip ||
+    getTrip();
 
-    $('results').hidden = true;
-    generatedTrip = null;
+  if ($('appointmentStatus')) {
+    $('appointmentStatus')
+      .textContent =
+        '';
+  }
 
-    if ($('cacheStatus')) {
-      $('cacheStatus').hidden = true;
+  if ($('downloadRequest')) {
+    $('downloadRequest').hidden =
+      true;
+  }
+
+  if ($('appointmentTripSummary')) {
+    $('appointmentTripSummary')
+      .textContent =
+        `${trip.origin || 'Departure city'} to ${
+          trip.destination ||
+          'destination'
+        }`;
+  }
+
+  if ($('appointmentReference')) {
+    $('appointmentReference')
+      .textContent =
+        generatedTrip
+          ? itineraryReference(
+              trip
+            )
+          : 'Itinerary will be attached after generation';
+  }
+
+  $('appointmentDialog')
+    .showModal();
+}
+
+function buildAppointmentRequest() {
+  const trip =
+    generatedTrip ||
+    getTrip();
+
+  const travellers =
+    trip.adults +
+    trip.children;
+
+  const totalBudget =
+    trip.budgetType ===
+      'person'
+      ? trip.budget *
+        travellers
+      : trip.budget;
+
+
+  const lines = [
+    'TRACKWORLD CONSULTATION REQUEST — NOT SENT',
+    '',
+    `Plan reference: ${
+      generatedTrip
+        ? itineraryReference(
+            trip
+          )
+        : 'No generated plan'
+    }`,
+    `Name: ${
+      $('customerName')
+        .value
+        .trim()
+    }`,
+    `Email: ${
+      $('email')
+        .value
+        .trim()
+    }`,
+    `Phone: ${
+      $('phone')
+        ?.value
+        .trim() ||
+      'Not provided'
+    }`,
+    `Preferred date: ${
+      $('preferredDate')
+        .value
+    }`,
+    `Preferred time: ${
+      $('preferredTime')
+        ?.value ||
+      'No preference'
+    }`,
+    '',
+    `Trip type: ${trip.type}`,
+    `Route: ${trip.origin} to ${trip.destination}`,
+    `Dates: ${trip.start} to ${trip.end}`,
+    `Travellers: ${trip.adults} adults, ${trip.children} children`,
+    `Occasion: ${trip.occasion}`,
+    `Stay: ${trip.hotel}`,
+    `Pace: ${trip.pace}`,
+    `Budget target: ${formatCurrency(totalBudget)}`,
+    `Interests: ${trip.interests.join(', ') || 'Open'}`,
+    `Services: ${trip.services.join(', ') || 'None'}`,
+    `Requirements: ${trip.comments || 'None'}`,
+    ''
+  ];
+
+  if (generatedTrip) {
+    lines.push(
+      '',
+      'PRELIMINARY ITINERARY',
+      '',
+      itineraryAsText()
+    );
+  }
+
+  lines.push(
+    '',
+    'Nothing has been sent, booked or reserved.'
+  );
+
+  return lines.join(
+    '\n'
+  );
+}
+
+function resetResults() {
+  $('results').hidden =
+    true;
+
+  generatedTrip = null;
+
+
+
+  dayObserver?.disconnect();
+
+  updateChoiceSummary();
+
+  if ($('cacheStatus')) {
+    $('cacheStatus').hidden =
+      true;
+  }
+
+  if ($('copyStatus')) {
+    $('copyStatus')
+      .textContent =
+        '';
+  }
+}
+
+createChips(
+  'interests',
+  interests,
+  [
+    'Culture & history',
+    'Food & flavours'
+  ]
+);
+
+createChips(
+  'services',
+  services,
+  [
+    'Flights',
+    'Hotels'
+  ]
+);
+
+const today =
+  new Date();
+
+const defaultStart =
+  new Date();
+
+defaultStart.setDate(
+  defaultStart.getDate() + 30
+);
+
+const defaultEnd =
+  new Date(defaultStart);
+
+defaultEnd.setDate(
+  defaultEnd.getDate() + 5
+);
+
+const defaultDates = {
+  start:
+    localDate(
+      defaultStart
+    ),
+
+  end:
+    localDate(
+      defaultEnd
+    )
+};
+
+$('start').min =
+  localDate(today);
+
+$('start').value =
+  defaultDates.start;
+
+$('end').min =
+  defaultDates.start;
+
+$('end').value =
+  defaultDates.end;
+
+$('preferredDate').min =
+  localDate(today);
+
+attachSuggestions(
+  'origin'
+);
+
+attachSuggestions(
+  'destination'
+);
+
+document
+  .querySelectorAll(
+    '[data-type]'
+  )
+  .forEach(button => {
+    button.addEventListener(
+      'click',
+      () => {
+        noteInteraction(
+          'tripType'
+        );
+
+        setTripType(
+          button.dataset.type
+        );
+      }
+    );
+  });
+
+document
+  .querySelectorAll(
+    '[data-counter]'
+  )
+  .forEach(button => {
+    button.addEventListener(
+      'click',
+      () => {
+        const input =
+          $(
+            button.dataset
+              .counter
+          );
+
+        const delta =
+          Number(
+            button.dataset
+              .delta
+          );
+
+        const minimum =
+          Number(
+            input.min
+          );
+
+        const maximum =
+          Number(
+            input.max
+          );
+
+        const current =
+          Number(
+            input.value
+          ) ||
+          minimum;
+
+        input.value =
+          Math.max(
+            minimum,
+            Math.min(
+              maximum,
+              current + delta
+            )
+          );
+
+        input.dispatchEvent(
+          new Event(
+            'input',
+            {
+              bubbles: true
+            }
+          )
+        );
+
+        noteInteraction(
+          button.dataset
+            .counter
+        );
+      }
+    );
+  });
+
+form.addEventListener(
+  'input',
+  event => {
+    updateSummary();
+
+    if (
+      event.target.name ||
+      event.target.id
+    ) {
+      const name =
+        event.target.name ||
+        event.target.id;
+
+      if (
+        !touchedFields.has(
+          name
+        )
+      ) {
+        noteInteraction(
+          name
+        );
+      }
+    }
+  }
+);
+
+form.addEventListener(
+  'change',
+  event => {
+    updateSummary();
+
+    const name =
+      event.target.name ||
+      event.target.id;
+
+    if (name) {
+      noteInteraction(
+        name
+      );
+    }
+  }
+);
+
+$('start').addEventListener(
+  'change',
+  () => {
+    $('end').min =
+      $('start').value;
+
+    if (
+      $('end').value <
+      $('start').value
+    ) {
+      $('end').value =
+        $('start').value;
     }
 
     updateSummary();
-  }, 0);
-});
+  }
+);
 
-function initialiseImage() {
-  if (!$('travelImage')) return;
+form.addEventListener(
+  'submit',
+  async event => {
+    event.preventDefault();
+    showError('');
 
-  $('travelImage').src = '/assets/travel.jpg';
-  $('travelImage').hidden = false;
+    const trip =
+      getTrip();
 
-  $('travelImage').addEventListener('error', () => {
-    $('travelImage').hidden = true;
+    try {
+      validateTrip(
+        trip
+      );
+    } catch (error) {
+      showError(
+        error.message
+      );
+
+      return;
+    }
+
+    if (
+      !form.reportValidity()
+    ) {
+      return;
+    }
+
+    const button =
+      $('generate');
+
+    const originalContent =
+      button.innerHTML;
+
+    const generationStarted =
+      performance.now();
+
+    sessionMetrics.submittedAt =
+      new Date().toISOString();
+
+    button.disabled = true;
+
+    button.textContent =
+      'Creating your itinerary…';
+
+    try {
+      $('results').hidden =
+        false;
+
+      startLoading();
+
+      if (
+        serverStatus.mode ===
+        'gemini'
+      ) {
+        const cached =
+          readCache(trip);
+
+        if (cached) {
+          sessionMetrics
+            .generationTimeMs =
+              Math.round(
+                performance.now() -
+                generationStarted
+              );
+
+          renderItinerary(
+            trip,
+            cached.result,
+            {
+              browserCached:
+                true,
+
+              legacyCached:
+                cached.legacy
+            }
+          );
+
+          return;
+        }
+      }
+
+      const response =
+        await fetch(
+          '/api/generate-itinerary',
+          {
+            method:
+              'POST',
+
+            headers: {
+              'Content-Type':
+                'application/json',
+
+              Accept:
+                'application/json'
+            },
+
+            body:
+              JSON.stringify(
+                trip
+              )
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+          'The itinerary could not be generated.'
+        );
+      }
+
+      sessionMetrics
+        .generationTimeMs =
+          Math.round(
+            performance.now() -
+            generationStarted
+          );
+
+      saveCache(
+        trip,
+        result
+      );
+
+      renderItinerary(
+        trip,
+        result
+      );
+
+      if (
+        result.mode ===
+          'gemini' &&
+        Number.isFinite(
+          result
+            .geminiRequestsRemaining
+        )
+      ) {
+        setSystemStatus(
+          'gemini',
+          `Gemini ready · ${result.geminiRequestsRemaining} API runs remaining`
+        );
+      }
+    } catch (error) {
+      stopLoading();
+
+      $('results').hidden =
+        true;
+
+      sessionMetrics.successful =
+        false;
+
+      saveMetrics();
+
+      showError(
+        error.message ||
+        'The itinerary could not be generated.'
+      );
+    } finally {
+      button.disabled =
+        false;
+
+      button.innerHTML =
+        originalContent;
+    }
+  }
+);
+
+$('itineraryLink')
+  .addEventListener(
+    'click',
+    event => {
+      if (
+        $('results').hidden
+      ) {
+        event.preventDefault();
+
+        showError(
+          'Complete the form and create your itinerary first.'
+        );
+
+        $('generate').focus();
+      }
+    }
+  );
+
+$('print')
+  .addEventListener(
+    'click',
+    () => {
+      document
+        .querySelectorAll(
+          '.day'
+        )
+        .forEach(day => {
+          day.open = true;
+        });
+
+      window.print();
+    }
+  );
+
+$('expandAll')
+  ?.addEventListener(
+    'click',
+    () => {
+      document
+        .querySelectorAll(
+          '.day'
+        )
+        .forEach(day => {
+          day.open = true;
+        });
+
+      noteInteraction(
+        'expand-all'
+      );
+    }
+  );
+
+$('collapseAll')
+  ?.addEventListener(
+    'click',
+    () => {
+      document
+        .querySelectorAll(
+          '.day'
+        )
+        .forEach(day => {
+          day.open = false;
+        });
+
+      noteInteraction(
+        'collapse-all'
+      );
+    }
+  );
+
+$('planAnother')
+  ?.addEventListener(
+    'click',
+    () => {
+      $('planner')
+        .scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+
+      setTimeout(
+        () => {
+          $('destination')
+            .focus();
+        },
+        500
+      );
+    }
+  );
+
+$('downloadItinerary')
+  ?.addEventListener(
+    'click',
+    () => {
+      if (
+        generatedTrip
+      ) {
+        downloadText(
+          `${itineraryReference(
+            generatedTrip
+          )}.txt`,
+
+          itineraryAsText()
+        );
+      }
+    }
+  );
+
+$('copyItinerary')
+  ?.addEventListener(
+    'click',
+    copyItinerarySummary
+  );
+
+document
+  .querySelectorAll(
+    '.appointment'
+  )
+  .forEach(button => {
+    button.addEventListener(
+      'click',
+      prepareAppointmentDialog
+    );
   });
 
+$('closeDialog')
+  .addEventListener(
+    'click',
+    () => {
+      $('appointmentDialog')
+        .close();
+    }
+  );
+
+$('appointmentDialog')
+  .addEventListener(
+    'click',
+    event => {
+      if (
+        event.target ===
+        $('appointmentDialog')
+      ) {
+        $('appointmentDialog')
+          .close();
+      }
+    }
+  );
+
+$('appointmentForm')
+  .addEventListener(
+    'submit',
+    event => {
+      event.preventDefault();
+
+      if (
+        !$('appointmentForm')
+          .reportValidity()
+      ) {
+        return;
+      }
+
+      appointmentRequest =
+        buildAppointmentRequest();
+
+      $('appointmentStatus')
+        .textContent =
+          'Your request is ready to download. Nothing has been sent or reserved.';
+
+      $('downloadRequest').hidden =
+        false;
+    }
+  );
+
+$('downloadRequest')
+  .addEventListener(
+    'click',
+    () => {
+      if (
+        appointmentRequest
+      ) {
+        downloadText(
+          'Trackworld-consultation-request.txt',
+          appointmentRequest
+        );
+      }
+    }
+  );
+
+document
+  .querySelectorAll(
+    '[data-rating]'
+  )
+  .forEach(button => {
+    button.addEventListener(
+      'click',
+      () => {
+        sessionMetrics
+          .satisfaction =
+            Number(
+              button.dataset
+                .rating
+            );
+
+        document
+          .querySelectorAll(
+            '[data-rating]'
+          )
+          .forEach(
+            ratingButton => {
+              const active =
+                ratingButton ===
+                button;
+
+              ratingButton
+                .classList
+                .toggle(
+                  'active',
+                  active
+                );
+
+              ratingButton
+                .setAttribute(
+                  'aria-pressed',
+                  String(active)
+                );
+            }
+          );
+
+        if ($('ratingStatus')) {
+          $('ratingStatus')
+            .textContent =
+              `Thank you · ${sessionMetrics.satisfaction}/5 recorded locally.`;
+        }
+
+        noteInteraction(
+          'satisfaction'
+        );
+
+        saveMetrics();
+      }
+    );
+  });
+
+$('downloadMetrics')
+  ?.addEventListener(
+    'click',
+    () => {
+      let records = [];
+
+      try {
+        records =
+          JSON.parse(
+            localStorage.getItem(
+              METRICS_KEY
+            ) || '[]'
+          );
+      } catch {
+        records = [
+          {
+            ...sessionMetrics
+          }
+        ];
+      }
+
+      downloadText(
+        'Trackworld-dashboard-efficiency-data.json',
+
+        JSON.stringify(
+          records,
+          null,
+          2
+        )
+      );
+    }
+  );
+
+form.addEventListener(
+  'reset',
+  () => {
+    setTimeout(
+      () => {
+        tripType =
+          'International';
+
+        document
+          .querySelectorAll(
+            '[data-type]'
+          )
+          .forEach(button => {
+            const selected =
+              button.dataset
+                .type ===
+              'International';
+
+            button
+              .classList
+              .toggle(
+                'selected',
+                selected
+              );
+
+            button
+              .setAttribute(
+                'aria-pressed',
+                String(selected)
+              );
+          });
+
+        $('start').value =
+          defaultDates.start;
+
+        $('end').value =
+          defaultDates.end;
+
+        $('end').min =
+          defaultDates.start;
+
+        clearDomesticValidity();
+        showError('');
+        resetResults();
+        updateSummary();
+      },
+      0
+    );
+  }
+);
+
+function initialiseImage() {
+  if (
+    !$('travelImage')
+  ) {
+    return;
+  }
+
+  $('travelImage').src =
+    '/assets/travel.jpg';
+
+  $('travelImage').hidden =
+    false;
+
+  $('travelImage')
+    .addEventListener(
+      'error',
+      () => {
+        $('travelImage')
+          .hidden =
+            true;
+      }
+    );
+
   if ($('photoCredit')) {
-    $('photoCredit').hidden = true;
+    $('photoCredit').hidden =
+      true;
   }
 }
 
 initialiseImage();
 updateSummary();
 loadStatus();
-
-/*
- * Premium itinerary presentation
- * --------------------------------
- * This block supports the itinerary overview bar,
- * timeline numbering and Plan another trip button.
- * It does not make any Gemini API requests.
- */
-
-function updatePremiumTripOverview() {
-  if (!generatedTrip) return;
-
-  const trip = generatedTrip;
-  const result = generatedTrip.result;
-  const days =
-    Array.isArray(result?.days) && result.days.length
-      ? result.days.length
-      : tripDays(trip);
-
-  const travellers =
-    Number(trip.adults) + Number(trip.children);
-
-  const totalBudget =
-    trip.budgetType === 'person'
-      ? trip.budget * travellers
-      : trip.budget;
-
-  if ($('overviewRoute')) {
-    $('overviewRoute').textContent =
-      `${trip.origin} → ${trip.destination}`;
-  }
-
-  if ($('overviewDuration')) {
-    $('overviewDuration').textContent =
-      `${days} day${days === 1 ? '' : 's'} · ` +
-      `${Math.max(0, days - 1)} night${
-        days - 1 === 1 ? '' : 's'
-      }`;
-  }
-
-  if ($('overviewTravellers')) {
-    $('overviewTravellers').textContent =
-      `${travellers} traveller${
-        travellers === 1 ? '' : 's'
-      }`;
-  }
-
-  if ($('overviewBudget')) {
-    $('overviewBudget').textContent =
-      formatCurrency(totalBudget);
-  }
-
-  if ($('overviewPace')) {
-    $('overviewPace').textContent =
-      `${trip.pace} · ${trip.hotel}`;
-  }
-
-  document.querySelectorAll('.day').forEach(
-    (day, index) => {
-      day.style.setProperty(
-        '--day-number',
-        `"${String(index + 1).padStart(2, '0')}"`
-      );
-    }
-  );
-}
-
-const resultObserver = new MutationObserver(() => {
-  if (
-    generatedTrip &&
-    !$('results').hidden &&
-    $('resultTitle').textContent.trim()
-  ) {
-    updatePremiumTripOverview();
-  }
-});
-
-resultObserver.observe($('resultTitle'), {
-  childList: true,
-  characterData: true,
-  subtree: true
-});
-
-if ($('planAnother')) {
-  $('planAnother').addEventListener('click', () => {
-    $('planner').scrollIntoView({
-      behavior: 'smooth',
-      block: 'start'
-    });
-
-    setTimeout(() => {
-      $('destination').focus();
-    }, 500);
-  });
-}

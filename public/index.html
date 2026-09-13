@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
 
   <title>Trackworld | AI Travel Planner</title>
 
@@ -11,7 +14,10 @@
     content="Create a personalised preliminary travel itinerary with Trackworld Tours & Travels Pvt Ltd."
   >
 
-  <meta name="theme-color" content="#bf2032">
+  <meta
+    name="theme-color"
+    content="#bf2032"
+  >
 
   <link
     rel="icon"
@@ -19,7 +25,10 @@
     href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23bf2032'/%3E%3Ctext x='7' y='24' fill='white' font-size='24' font-family='serif'%3Et%3C/text%3E%3C/svg%3E"
   >
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
 
   <link
     rel="preconnect"
@@ -27,7 +36,10 @@
     crossorigin
   >
 
-  <link rel="stylesheet" href="/styles.css?v=4">
+  <link
+    rel="stylesheet"
+    href="/styles.css?v=6"
+  >
 </head>
 
 <body>
@@ -41,15 +53,23 @@
         track<span>world</span>
       </span>
 
-      <small>Tours & Travels Pvt Ltd</small>
+      <small>
+        Tours & Travels Pvt Ltd
+      </small>
     </a>
 
     <nav aria-label="Primary navigation">
-      <a href="#planner" class="active">
+      <a
+        href="#planner"
+        class="active"
+      >
         Trip planner
       </a>
 
-      <a href="#results" id="itineraryLink">
+      <a
+        href="#results"
+        id="itineraryLink"
+      >
         Your itinerary
       </a>
 
@@ -99,7 +119,10 @@
       </div>
     </section>
 
-    <div class="workspace" id="planner">
+    <div
+      class="workspace"
+      id="planner"
+    >
       <form
         id="tripForm"
         class="panel planner-panel"
@@ -110,7 +133,9 @@
               AI trip planner
             </p>
 
-            <h2>Design your journey</h2>
+            <h2>
+              Design your journey
+            </h2>
 
             <p>
               Tell us what your ideal trip looks like.
@@ -171,9 +196,8 @@
               >
 
               <small class="field-help">
-                Domestic trips require an Indian city
-                from the suggestions. International
-                trips allow other locations.
+                Start typing and select the closest
+                matching location.
               </small>
             </div>
 
@@ -194,10 +218,8 @@
               >
 
               <small class="field-help">
-                Domestic trips require an Indian
-                destination from the suggestions.
-                Switch to International for locations
-                outside India.
+                Domestic mode accepts Indian
+                locations only.
               </small>
             </div>
 
@@ -381,7 +403,10 @@
                 Stay preference
               </label>
 
-              <select id="hotel" name="hotel">
+              <select
+                id="hotel"
+                name="hotel"
+              >
                 <option>4-star comfort</option>
                 <option>3-star essentials</option>
                 <option>5-star luxury</option>
@@ -395,7 +420,10 @@
                 Travel pace
               </label>
 
-              <select id="pace" name="pace">
+              <select
+                id="pace"
+                name="pace"
+              >
                 <option>Balanced</option>
                 <option>Relaxed</option>
                 <option>Activity-packed</option>
@@ -500,7 +528,9 @@
               Your selected journey
             </p>
 
-            <h3>At a glance</h3>
+            <h3>
+              At a glance
+            </h3>
 
             <div class="summary-row">
               <span>Destination</span>
@@ -593,19 +623,36 @@
         hidden
       >
         <div
-          class="loading-mark"
+          class="loading-orbit"
           aria-hidden="true"
         >
-          ✦
+          <span>✦</span>
         </div>
 
-        <div>
-          <h2>Shaping your journey…</h2>
-
-          <p>
-            We are turning your travel preferences
-            into a thoughtful preliminary itinerary.
+        <div class="loading-copy">
+          <p class="eyebrow">
+            Trackworld AI planner
           </p>
+
+          <h2>
+            Shaping your journey…
+          </h2>
+
+          <p id="loadingStage">
+            Understanding your travel preferences
+          </p>
+
+          <div
+            class="loading-track"
+            aria-hidden="true"
+          >
+            <span id="loadingProgress"></span>
+          </div>
+
+          <small>
+            No automatic retries are made, helping
+            protect your API allowance.
+          </small>
         </div>
       </div>
 
@@ -632,24 +679,30 @@
             </div>
           </div>
 
-          <button
-            class="outline result-print"
-            id="print"
-            type="button"
-          >
-            <span aria-hidden="true">↧</span>
-            Print / save PDF
-          </button>
+          <div class="result-primary-actions">
+            <button
+              class="outline result-print"
+              id="print"
+              type="button"
+            >
+              <span aria-hidden="true">↧</span>
+              Print / save PDF
+            </button>
+          </div>
         </div>
 
         <div class="trip-overview">
           <div class="overview-item">
-            <span class="overview-icon" aria-hidden="true">
+            <span
+              class="overview-icon"
+              aria-hidden="true"
+            >
               ↗
             </span>
 
             <div>
               <small>ROUTE</small>
+
               <strong id="overviewRoute">
                 Your selected route
               </strong>
@@ -657,12 +710,33 @@
           </div>
 
           <div class="overview-item">
-            <span class="overview-icon" aria-hidden="true">
+            <span
+              class="overview-icon"
+              aria-hidden="true"
+            >
+              ▣
+            </span>
+
+            <div>
+              <small>DATES</small>
+
+              <strong id="overviewDates">
+                Travel dates
+              </strong>
+            </div>
+          </div>
+
+          <div class="overview-item">
+            <span
+              class="overview-icon"
+              aria-hidden="true"
+            >
               ◷
             </span>
 
             <div>
               <small>DURATION</small>
+
               <strong id="overviewDuration">
                 Trip duration
               </strong>
@@ -670,12 +744,16 @@
           </div>
 
           <div class="overview-item">
-            <span class="overview-icon" aria-hidden="true">
+            <span
+              class="overview-icon"
+              aria-hidden="true"
+            >
               ◉
             </span>
 
             <div>
               <small>TRAVELLERS</small>
+
               <strong id="overviewTravellers">
                 Travel party
               </strong>
@@ -683,12 +761,16 @@
           </div>
 
           <div class="overview-item">
-            <span class="overview-icon" aria-hidden="true">
+            <span
+              class="overview-icon"
+              aria-hidden="true"
+            >
               ₹
             </span>
 
             <div>
               <small>BUDGET</small>
+
               <strong id="overviewBudget">
                 Budget target
               </strong>
@@ -696,12 +778,16 @@
           </div>
 
           <div class="overview-item">
-            <span class="overview-icon" aria-hidden="true">
+            <span
+              class="overview-icon"
+              aria-hidden="true"
+            >
               ✦
             </span>
 
             <div>
               <small>TRAVEL STYLE</small>
+
               <strong id="overviewPace">
                 Selected pace
               </strong>
@@ -718,19 +804,53 @@
           expert verification.
         </div>
 
+        <div class="itinerary-toolbar">
+          <div class="day-navigation-wrap">
+            <span class="toolbar-label">
+              Jump to
+            </span>
+
+            <nav
+              id="dayNavigation"
+              class="day-navigation"
+              aria-label="Itinerary days"
+            ></nav>
+          </div>
+
+          <div class="itinerary-tools">
+            <button
+              id="expandAll"
+              type="button"
+            >
+              Expand all
+            </button>
+
+            <button
+              id="collapseAll"
+              type="button"
+            >
+              Collapse all
+            </button>
+          </div>
+        </div>
+
         <div class="journey-heading">
           <div>
             <p class="eyebrow">
               Day-by-day plan
             </p>
 
-            <h3>Your journey, thoughtfully arranged</h3>
+            <h3>
+              Your journey, thoughtfully arranged
+            </h3>
           </div>
 
-          <p>
-            Open or close each day to explore the
-            morning, afternoon and evening plan.
-          </p>
+          <div class="journey-heading-side">
+            <p>
+              Review your preliminary schedule, then
+              let a Trackworld expert refine every detail.
+            </p>
+          </div>
         </div>
 
         <div
@@ -745,7 +865,8 @@
             </p>
 
             <h3>
-              Useful guidance before you speak to an expert
+              Useful guidance before you speak to an
+              expert
             </h3>
           </div>
 
@@ -816,10 +937,9 @@
             </h3>
 
             <p>
-              A Trackworld expert can refine this
-              itinerary and arrange tickets, hotels,
-              transfers, visas and other travel
-              services.
+              Your complete preliminary itinerary will
+              be included in the consultation request
+              so a Trackworld expert can refine it.
             </p>
           </div>
 
@@ -896,10 +1016,18 @@
       request and does not reserve an appointment.
     </p>
 
-    <div
-      id="appointmentTripSummary"
-      class="appointment-trip-summary"
-    ></div>
+    <div class="appointment-plan-card">
+      <span
+        id="appointmentTripSummary"
+        class="appointment-trip-summary"
+      ></span>
+
+      <small>
+        PLAN REFERENCE
+      </small>
+
+      <strong id="appointmentReference"></strong>
+    </div>
 
     <form id="appointmentForm">
       <div class="dialog-grid">
@@ -1005,6 +1133,9 @@
     </form>
   </dialog>
 
-  <script src="/app.js?v=3" defer></script>
+  <script
+    src="/app.js?v=5"
+    defer
+  ></script>
 </body>
 </html>
