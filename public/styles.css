@@ -1907,7 +1907,7 @@ dialog > p {
     break-inside: avoid;
     box-shadow: none;
   }
-
+}
   /*
  * Final five-part timed itinerary
  * Applies to every dynamically generated day.
@@ -2203,5 +2203,4 @@ dialog > p {
   .day summary .day-title {
     font-size: 15px;
   }
-}
 }
