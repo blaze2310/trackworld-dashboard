@@ -1,7 +1,7 @@
 const $ = id => document.getElementById(id);
 const form = $('tripForm');
 
-const CACHE_PREFIX = 'trackworld-itinerary-v2:';
+const CACHE_PREFIX = 'trackworld-itinerary-v3:';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 let tripType = 'International';
@@ -772,7 +772,7 @@ async function loadStatus() {
     if (serverStatus.mode === 'gemini') {
       setSystemStatus(
         'gemini',
-        `Gemini ready · ${serverStatus.remainingRequests} API runs remaining`
+        `Gemini ready · ${serverStatus.geminiRequestsRemaining} API runs remaining`
       );
     } else {
       setSystemStatus(
@@ -790,7 +790,8 @@ async function loadStatus() {
 
 function cacheKey(trip) {
   const data = JSON.stringify({
-    model: serverStatus.model || 'default',
+    model: serverStatus.geminiModel || 'default',
+    schemaVersion: 3,
     trip: {
       ...trip,
       interests: [...trip.interests].sort(),
@@ -878,13 +879,19 @@ function renderItinerary(
   result,
   browserCached = false
 ) {
-  if (!Array.isArray(result.days) || !result.days.length) {
+  if (
+    !Array.isArray(result.days) ||
+    !result.days.length
+  ) {
     throw new Error(
       'The itinerary response did not contain any days.'
     );
   }
 
-  generatedTrip = { ...trip, result };
+  generatedTrip = {
+    ...trip,
+    result
+  };
 
   $('resultTitle').textContent =
     result.tripTitle ||
@@ -905,10 +912,12 @@ function renderItinerary(
     if (browserCached) {
       $('cacheStatus').textContent =
         'Browser cache · no API run used';
+
       $('cacheStatus').hidden = false;
     } else if (result.cached) {
       $('cacheStatus').textContent =
         'Server cache · no new API run used';
+
       $('cacheStatus').hidden = false;
     } else {
       $('cacheStatus').hidden = true;
@@ -922,51 +931,204 @@ function renderItinerary(
         : 'Mock itinerary generated locally. No Gemini API request was used.';
   }
 
+  const totalBudget =
+    trip.budgetType === 'person'
+      ? trip.budget *
+        (trip.adults + trip.children)
+      : trip.budget;
+
+  if ($('overviewRoute')) {
+    $('overviewRoute').textContent =
+      `${trip.origin} → ${trip.destination}`;
+  }
+
+  if ($('overviewDuration')) {
+    const numberOfDays = result.days.length;
+    const numberOfNights =
+      Math.max(0, numberOfDays - 1);
+
+    $('overviewDuration').textContent =
+      `${numberOfDays} day${
+        numberOfDays === 1 ? '' : 's'
+      } · ${numberOfNights} night${
+        numberOfNights === 1 ? '' : 's'
+      }`;
+  }
+
+  if ($('overviewTravellers')) {
+    const travellerCount =
+      trip.adults + trip.children;
+
+    $('overviewTravellers').textContent =
+      `${travellerCount} traveller${
+        travellerCount === 1 ? '' : 's'
+      }`;
+  }
+
+  if ($('overviewBudget')) {
+    $('overviewBudget').textContent =
+      formatCurrency(totalBudget);
+  }
+
+  if ($('overviewPace')) {
+    $('overviewPace').textContent =
+      `${trip.pace} · ${trip.hotel}`;
+  }
+
   $('days').replaceChildren();
 
-  result.days.forEach((day, index) => {
-    const details = document.createElement('details');
-    details.className = 'day';
-    details.open = index < 2;
+  const legacyTimes = [
+    '9:00 AM',
+    '1:30 PM',
+    '6:30 PM'
+  ];
 
-    const heading = document.createElement('summary');
-    const dayNumber = document.createElement('span');
+  const legacyTitles = [
+    'Morning experience',
+    'Afternoon experience',
+    'Evening experience'
+  ];
+
+  result.days.forEach((day, dayIndex) => {
+    const details =
+      document.createElement('details');
+
+    details.className = 'day';
+    details.open = dayIndex < 2;
+
+    details.style.setProperty(
+      '--day-number',
+      `"${String(dayIndex + 1).padStart(2, '0')}"`
+    );
+
+    const heading =
+      document.createElement('summary');
+
+    const dayNumber =
+      document.createElement('span');
+
+    dayNumber.className = 'day-label';
 
     dayNumber.textContent =
-      `DAY ${String(index + 1).padStart(2, '0')}`;
+      `DAY ${String(dayIndex + 1).padStart(2, '0')}`;
+
+    const dayTitle =
+      document.createElement('strong');
+
+    dayTitle.className = 'day-title';
+
+    dayTitle.textContent =
+      day.title ||
+      `Day ${dayIndex + 1}`;
 
     heading.append(
       dayNumber,
-      document.createTextNode(
-        day.title || `Day ${index + 1}`
-      )
+      dayTitle
     );
 
-    const schedule = document.createElement('div');
-    schedule.className = 'schedule';
+    const schedule =
+      document.createElement('div');
 
-    ['MORNING', 'AFTERNOON', 'EVENING'].forEach(
-      (period, activityIndex) => {
-        const column = document.createElement('div');
-        const label = document.createElement('small');
-        const activity = document.createElement('p');
+    schedule.className =
+      'schedule timed-schedule';
 
-        label.textContent = period;
-        activity.textContent =
-          day.items?.[activityIndex] ||
-          'To be refined with your travel expert.';
+    const items =
+      Array.isArray(day.items)
+        ? day.items
+        : [];
 
-        column.append(label, activity);
-        schedule.append(column);
+    items.forEach(
+      (rawItem, itemIndex) => {
+        const item =
+          typeof rawItem === 'string'
+            ? {
+                time:
+                  legacyTimes[itemIndex] ||
+                  `${itemIndex + 1}:00 PM`,
+
+                title:
+                  legacyTitles[itemIndex] ||
+                  `Activity ${itemIndex + 1}`,
+
+                description: rawItem
+              }
+            : rawItem;
+
+        const card =
+          document.createElement('article');
+
+        card.className =
+          `schedule-card schedule-card-${
+            itemIndex + 1
+          }`;
+
+        const time =
+          document.createElement('time');
+
+        time.className = 'activity-time';
+        time.textContent =
+          item.time ||
+          'Time to confirm';
+
+        const activityNumber =
+          document.createElement('span');
+
+        activityNumber.className =
+          'activity-number';
+
+        activityNumber.textContent =
+          String(itemIndex + 1).padStart(
+            2,
+            '0'
+          );
+
+        const cardTop =
+          document.createElement('div');
+
+        cardTop.className =
+          'schedule-card-top';
+
+        cardTop.append(
+          time,
+          activityNumber
+        );
+
+        const activityTitle =
+          document.createElement('h4');
+
+        activityTitle.textContent =
+          item.title ||
+          `Activity ${itemIndex + 1}`;
+
+        const description =
+          document.createElement('p');
+
+        description.textContent =
+          item.description ||
+          'To be refined with your Trackworld travel expert.';
+
+        card.append(
+          cardTop,
+          activityTitle,
+          description
+        );
+
+        schedule.append(card);
       }
     );
 
-    details.append(heading, schedule);
+    details.append(
+      heading,
+      schedule
+    );
 
     if (day.note) {
-      const note = document.createElement('p');
+      const note =
+        document.createElement('p');
+
       note.className = 'day-note';
       note.textContent = day.note;
+
       details.append(note);
     }
 
@@ -993,13 +1155,17 @@ function renderItinerary(
 
   $('preferences').textContent =
     `Interests: ${
-      trip.interests.join(', ') || 'Open to suggestions'
+      trip.interests.join(', ') ||
+      'Open to suggestions'
     }. Services: ${
-      trip.services.join(', ') || 'None selected'
+      trip.services.join(', ') ||
+      'None selected'
     }.` +
-    (trip.comments
-      ? ` Additional requirements: ${trip.comments}`
-      : '');
+    (
+      trip.comments
+        ? ` Additional requirements: ${trip.comments}`
+        : ''
+    );
 
   setLoading(false);
   $('results').hidden = false;
@@ -1070,11 +1236,11 @@ form.addEventListener('submit', async event => {
 
     if (
       result.mode === 'gemini' &&
-      Number.isFinite(result.remainingRequests)
+      Number.isFinite(result.geminiRequestsRemaining)
     ) {
       setSystemStatus(
         'gemini',
-        `Gemini ready · ${result.remainingRequests} API runs remaining`
+        `Gemini ready · ${result.geminiRequestsRemaining} API runs remaining`
       );
     }
   } catch (error) {
