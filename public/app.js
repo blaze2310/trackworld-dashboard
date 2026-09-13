@@ -1061,41 +1061,53 @@ function attachSuggestions(id) {
   }
 
   async function search() {
-    const query =
-      input.value.trim();
+  const query = input.value.trim();
 
-    if (query.length < 2) {
-      matches = [];
-
-      showHint(
-        'Type at least two letters to search cities.'
-      );
-
-      return;
-    }
-
-    requestController?.abort();
-
-    requestController =
-      new AbortController();
-
-    const currentSequence =
-      ++requestSequence;
+  if (query.length < 2) {
+    matches = [];
 
     showHint(
-      'Searching cities…'
+      'Type at least two letters to search cities.'
     );
 
-    try {
-      const parameters =
-        new URLSearchParams({
-          q: query,
-          mode: tripType,
-          limit: '8'
-        });
+    return;
+  }
 
-      const response =
-        await fetch(
+  requestController?.abort();
+
+  const controller =
+    new AbortController();
+
+  requestController =
+    controller;
+
+  const currentSequence =
+    ++requestSequence;
+
+  const modeAtRequest =
+    tripType;
+
+  showHint('Searching cities…');
+
+  const parameters =
+    new URLSearchParams({
+      q: query,
+      mode: modeAtRequest,
+      limit: '8'
+    });
+
+  try {
+    let response;
+    let lastError;
+
+    // Retry once for a temporary network failure.
+    for (
+      let attempt = 0;
+      attempt < 2;
+      attempt += 1
+    ) {
+      try {
+        response = await fetch(
           `/api/places?${parameters}`,
           {
             headers: {
@@ -1104,56 +1116,111 @@ function attachSuggestions(id) {
             },
 
             signal:
-              requestController.signal
+              controller.signal
           }
         );
 
-      const result =
-        await response.json();
+        break;
+      } catch (error) {
+        lastError = error;
 
-      if (!response.ok) {
-        throw new Error(
-          result.error ||
-          'City search is temporarily unavailable.'
+        if (
+          error.name ===
+            'AbortError' ||
+          currentSequence !==
+            requestSequence ||
+          attempt === 1
+        ) {
+          throw error;
+        }
+
+        await new Promise(
+          resolve => {
+            setTimeout(
+              resolve,
+              350
+            );
+          }
         );
       }
+    }
 
-      if (
-        currentSequence !==
-        requestSequence
-      ) {
-        return;
-      }
-
-      matches =
-        Array.isArray(
-          result.results
+    if (!response) {
+      throw (
+        lastError ||
+        new Error(
+          'City search is temporarily unavailable.'
         )
-          ? result.results
-          : [];
-
-      activeIndex = -1;
-      renderMatches();
-    } catch (error) {
-      console.error(
-        '[city-autocomplete-error]',
-        error
-      );
-
-      if (
-        error.name ===
-        'AbortError'
-      ) {
-        return;
-      }
-
-      matches = [];
-
-      showHint(
-        'City search is temporarily unavailable. Please try again.'
       );
     }
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        'City search is temporarily unavailable.'
+      );
+    }
+
+    // Ignore a response if the user has typed
+    // something else or switched modes.
+    if (
+      currentSequence !==
+        requestSequence ||
+      query !==
+        input.value.trim() ||
+      modeAtRequest !==
+        tripType
+    ) {
+      return;
+    }
+
+    matches =
+      Array.isArray(
+        result.results
+      )
+        ? result.results
+        : [];
+
+    activeIndex = -1;
+    renderMatches();
+  } catch (error) {
+    // An aborted or outdated request must not
+    // replace newer successful suggestions.
+    if (
+      error.name ===
+        'AbortError' ||
+      currentSequence !==
+        requestSequence ||
+      query !==
+        input.value.trim() ||
+      modeAtRequest !==
+        tripType
+    ) {
+      return;
+    }
+
+    console.error(
+      '[city-autocomplete-error]',
+      error
+    );
+
+    matches = [];
+
+    showHint(
+      'City search is temporarily unavailable. Check your connection and try again.'
+    );
+  } finally {
+    if (
+      requestController ===
+      controller
+    ) {
+      requestController = null;
+    }
   }
+}
 
   function scheduleSearch() {
     clearTimeout(
