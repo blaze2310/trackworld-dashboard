@@ -1135,6 +1135,11 @@ function attachSuggestions(id) {
       activeIndex = -1;
       renderMatches();
     } catch (error) {
+      console.error(
+        '[city-autocomplete-error]',
+        error
+      );
+
       if (
         error.name ===
         'AbortError'
