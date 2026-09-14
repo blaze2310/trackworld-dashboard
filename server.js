@@ -1660,95 +1660,208 @@ function validateGeneratedItinerary(
 
 function friendlyGeminiError(error) {
   const raw =
-    error instanceof Error
+    typeof error?.message === 'string'
       ? error.message
-      : String(error || '');
+      : typeof error === 'string'
+        ? error
+        : 'Unknown provider error';
+
+  // Some SDK errors contain a JSON response
+  // inside the message.
+  let parsed = null;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+
+    if (start >= 0 && end > start) {
+      try {
+        parsed = JSON.parse(
+          raw.slice(start, end + 1)
+        );
+      } catch {
+        // Keep the original message for diagnosis.
+      }
+    }
+  }
+
+  const detail =
+    parsed?.error ||
+    parsed ||
+    error?.error ||
+    {};
+
+  const codeCandidates = [
+    detail.code,
+    error?.status,
+    error?.statusCode,
+    error?.code,
+    error?.response?.status
+  ];
+
+  const providerCode = codeCandidates
+    .map(Number)
+    .find(code =>
+      Number.isInteger(code) &&
+      code >= 400 &&
+      code <= 599
+    ) || null;
+
+  const providerStatus = String(
+    detail.status ||
+    (
+      typeof error?.status === 'string'
+        ? error.status
+        : ''
+    )
+  ).toUpperCase();
+
+  const providerMessage =
+    typeof detail.message === 'string'
+      ? detail.message
+      : raw;
+
+  // Log only selected diagnostic fields.
+  // Do not log the complete error object,
+  // request headers, or itinerary input.
+  function redact(value) {
+    let text = String(value || '');
+
+    const configuredKey =
+      process.env.GEMINI_API_KEY;
+
+    if (configuredKey) {
+      text = text
+        .split(configuredKey)
+        .join('[REDACTED]');
+    }
+
+    return text
+      .replace(
+        /AIza[A-Za-z0-9_-]+/g,
+        '[REDACTED]'
+      )
+      .replace(
+        /((?:[?&]key|x-goog-api-key|api_key)\s*[=:]\s*)[^&\s"',}]+/gi,
+        '$1[REDACTED]'
+      )
+      .replace(
+        /Bearer\s+\S+/gi,
+        'Bearer [REDACTED]'
+      )
+      .slice(0, 2000);
+  }
+
+  console.error(
+    '[gemini-provider-error]',
+    JSON.stringify({
+      model: GEMINI_MODEL,
+      code: providerCode,
+      status: redact(providerStatus),
+      message: redact(providerMessage)
+    })
+  );
 
   const normalized =
-    raw.toLowerCase();
+    providerMessage.toLowerCase();
 
-  if (
-    normalized.includes('429') ||
-    normalized.includes('quota') ||
-    normalized.includes(
-      'resource_exhausted'
-    )
+  let category = 'unknown';
+
+  // Prefer structured codes over message matching.
+  if (providerCode === 429) {
+    category = 'quota';
+  } else if (
+    providerCode === 401 ||
+    providerCode === 403
   ) {
-    const friendly =
-      new Error(
-        'Gemini is temporarily rate-limited. No automatic retry was made, so please try again later.'
-      );
-
-    friendly.statusCode = 429;
-
-    return friendly;
+    category = 'authentication';
+  } else if (providerCode === 404) {
+    category = 'model';
+  } else if (providerCode === 503) {
+    category = 'unavailable';
+  } else if (providerCode === 504) {
+    category = 'timeout';
   }
 
-  if (
-    normalized.includes('503') ||
-    normalized.includes(
-      'unavailable'
-    ) ||
-    normalized.includes(
-      'high demand'
-    )
-  ) {
-    const friendly =
-      new Error(
-        'Gemini is temporarily experiencing high demand. No automatic retry was made; please try again later.'
-      );
-
-    friendly.statusCode = 503;
-
-    return friendly;
+  // Use specific wording when a code is absent
+  // or does not identify one of these categories.
+  if (category === 'unknown') {
+    if (
+      providerStatus === 'RESOURCE_EXHAUSTED' ||
+      /\bquota\b|rate.?limit|resource_exhausted/.test(
+        normalized
+      )
+    ) {
+      category = 'quota';
+    } else if (
+      providerStatus === 'UNAUTHENTICATED' ||
+      providerStatus === 'PERMISSION_DENIED' ||
+      /api key|unauthenticated|permission denied/.test(
+        normalized
+      )
+    ) {
+      category = 'authentication';
+    } else if (
+      providerStatus === 'NOT_FOUND' ||
+      /model[\s\S]*(?:not found|no longer available|not supported)/.test(
+        normalized
+      )
+    ) {
+      category = 'model';
+    } else if (
+      providerStatus === 'UNAVAILABLE' ||
+      /high demand|overloaded|service unavailable/.test(
+        normalized
+      )
+    ) {
+      category = 'unavailable';
+    } else if (
+      providerStatus === 'DEADLINE_EXCEEDED' ||
+      /timed out|timeout|deadline exceeded/.test(
+        normalized
+      )
+    ) {
+      category = 'timeout';
+    }
   }
 
-  if (
-    normalized.includes('404') ||
-    normalized.includes(
-      'not found'
-    ) ||
-    normalized.includes(
-      'no longer available'
-    )
-  ) {
-    const friendly =
-      new Error(
-        'The configured Gemini model is unavailable. Update GEMINI_MODEL in Render and try again.'
-      );
+  const messages = {
+    quota: [
+      429,
+      'The itinerary service has reached a request or usage limit. Please try again later.'
+    ],
+    authentication: [
+      503,
+      'The itinerary service has an access or configuration problem. Please contact the travel team.'
+    ],
+    model: [
+      503,
+      'The configured itinerary model is not available. Please contact the travel team.'
+    ],
+    unavailable: [
+      503,
+      'The itinerary service is temporarily unavailable. Please try again shortly.'
+    ],
+    timeout: [
+      504,
+      'The itinerary service took too long to respond. Please try again shortly.'
+    ],
+    unknown: [
+      502,
+      'The itinerary could not be generated. Please try again later.'
+    ]
+  };
 
-    friendly.statusCode = 503;
+  const [statusCode, message] =
+    messages[category];
 
-    return friendly;
-  }
+  const friendly = new Error(
+    `${message} No automatic retry was made.`
+  );
 
-  if (
-    normalized.includes(
-      'api key'
-    ) ||
-    normalized.includes(
-      'permission'
-    ) ||
-    normalized.includes(
-      'unauthenticated'
-    )
-  ) {
-    const friendly =
-      new Error(
-        'Gemini could not authenticate. Check the private GEMINI_API_KEY configured in Render.'
-      );
-
-    friendly.statusCode = 503;
-
-    return friendly;
-  }
-
-  const friendly =
-    new Error(
-      'Gemini could not generate the itinerary. No automatic retry was made.'
-    );
-
-  friendly.statusCode = 502;
+  friendly.statusCode = statusCode;
 
   return friendly;
 }
