@@ -5,6 +5,10 @@ const CACHE_PREFIX = 'trackworld-itinerary-v4:';
 const LEGACY_CACHE_PREFIX = 'trackworld-itinerary-v3:';
 const METRICS_KEY = 'trackworld-module1-metrics-v1';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
+const PLACE_CACHE_TTL = 15 * 60 * 1000;
+const PLACE_CACHE_LIMIT = 100;
+
+const placeSearchCache = new Map();
 
 let tripType = 'International';
 let generatedTrip = null;
@@ -1073,6 +1077,42 @@ function attachSuggestions(id) {
     return;
   }
 
+  const modeAtRequest =
+    tripType;
+
+  const cacheKey =
+    `${modeAtRequest}:${normalize(query)}`;
+
+  const cachedSearch =
+    placeSearchCache.get(
+      cacheKey
+    );
+
+  if (
+    cachedSearch &&
+    Date.now() -
+      cachedSearch.savedAt <
+      PLACE_CACHE_TTL
+  ) {
+    requestController?.abort();
+    requestSequence += 1;
+
+    matches =
+      cachedSearch.results.map(
+        place => ({ ...place })
+      );
+
+    activeIndex = -1;
+    renderMatches();
+    return;
+  }
+
+  if (cachedSearch) {
+    placeSearchCache.delete(
+      cacheKey
+    );
+  }
+
   requestController?.abort();
 
   const controller =
@@ -1083,9 +1123,6 @@ function attachSuggestions(id) {
 
   const currentSequence =
     ++requestSequence;
-
-  const modeAtRequest =
-    tripType;
 
   showHint('Searching cities…');
 
@@ -1181,8 +1218,38 @@ function attachSuggestions(id) {
       Array.isArray(
         result.results
       )
-        ? result.results
-        : [];
+          ? result.results
+          : [];
+
+    placeSearchCache.delete(
+      cacheKey
+    );
+
+    placeSearchCache.set(
+      cacheKey,
+      {
+        savedAt: Date.now(),
+        results:
+          matches.map(
+            place => ({ ...place })
+          )
+      }
+    );
+
+    while (
+      placeSearchCache.size >
+      PLACE_CACHE_LIMIT
+    ) {
+      const oldestKey =
+        placeSearchCache
+          .keys()
+          .next()
+          .value;
+
+      placeSearchCache.delete(
+        oldestKey
+      );
+    }
 
     activeIndex = -1;
     renderMatches();
@@ -1230,13 +1297,22 @@ function attachSuggestions(id) {
     debounceTimer =
       setTimeout(
         search,
-        220
+        320
       );
   }
 
   input.addEventListener(
     'focus',
-    scheduleSearch
+    () => {
+      if (matches.length) {
+        renderMatches();
+        return;
+      }
+
+      if (!selectedPlaces[id]) {
+        scheduleSearch();
+      }
+    }
   );
 
   input.addEventListener(
@@ -2114,7 +2190,7 @@ function updateResultOverview(
   }
 }
 
-function sourceDescription(
+function itinerarySourceDescription(
   result,
   browserCached,
   legacyCached
@@ -2132,11 +2208,7 @@ function sourceDescription(
     );
   }
 
-  return (
-    result.mode === 'gemini'
-      ? 'Gemini API'
-      : 'Local mock data'
-  );
+  return 'New itinerary';
 }
 
 function renderMetrics() {
@@ -2227,39 +2299,12 @@ function renderItinerary(
       result.summary ||
       `${trip.occasion} with a ${trip.pace.toLowerCase()} pace.`;
 
-  if ($('resultSource')) {
-    $('resultSource')
-      .textContent =
-        result.mode ===
-        'gemini'
-          ? 'Gemini AI itinerary'
-          : 'Mock itinerary';
-  }
-
   const source =
-    sourceDescription(
+    itinerarySourceDescription(
       result,
       browserCached,
       legacyCached
     );
-
-  if ($('cacheStatus')) {
-    $('cacheStatus')
-      .textContent =
-        source;
-
-    $('cacheStatus').hidden =
-      false;
-  }
-
-  if ($('resultNotice')) {
-    $('resultNotice')
-      .textContent =
-        result.mode ===
-        'gemini'
-          ? 'AI-generated preliminary itinerary. Prices, availability, routes, opening hours and visa requirements require expert verification.'
-          : 'Mock itinerary generated locally. No Gemini API request was used.';
-  }
 
   updateResultOverview(
     trip,
@@ -2903,11 +2948,6 @@ function resetResults() {
   dayObserver?.disconnect();
 
   updateChoiceSummary();
-
-  if ($('cacheStatus')) {
-    $('cacheStatus').hidden =
-      true;
-  }
 
   if ($('copyStatus')) {
     $('copyStatus')

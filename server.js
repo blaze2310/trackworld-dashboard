@@ -113,6 +113,10 @@ function loadCityDatabase() {
           id: row[0],
           name: row[1],
           asciiName: row[2],
+          normalizedName:
+            normalizePlaceText(row[1]),
+          normalizedAsciiName:
+            normalizePlaceText(row[2]),
           aliases,
           countryCode: row[4],
           country: row[5],
@@ -151,29 +155,167 @@ const indianCities = allCities.filter(
   (city) => city.countryCode === 'IN'
 );
 
+const PLACE_SEARCH_CACHE_TTL_MS =
+  15 * 60 * 1000;
+
+const PLACE_SEARCH_CACHE_LIMIT = 500;
+const placeSearchCache = new Map();
+
+function createCityPrefixIndex(cities) {
+  const index = new Map();
+
+  cities.forEach(
+    (city, cityIndex) => {
+      const keys = new Set();
+
+      city.searchableNames.forEach(
+        searchableName => {
+          const candidateStarts = [
+            searchableName,
+            ...searchableName.split(' ')
+          ];
+
+          candidateStarts.forEach(
+            candidate => {
+              if (candidate.length >= 2) {
+                keys.add(
+                  candidate.slice(0, 2)
+                );
+              }
+
+              if (candidate.length >= 3) {
+                keys.add(
+                  candidate.slice(0, 3)
+                );
+              }
+            }
+          );
+        }
+      );
+
+      keys.forEach(key => {
+        if (!index.has(key)) {
+          index.set(key, []);
+        }
+
+        index.get(key).push(
+          cityIndex
+        );
+      });
+    }
+  );
+
+  return index;
+}
+
+const cityPrefixIndex =
+  createCityPrefixIndex(
+    allCities
+  );
+
+function cityCandidatesForQuery(
+  query,
+  mode
+) {
+  const prefixLength =
+    query.length >= 3
+      ? 3
+      : 2;
+
+  const prefix = query.slice(
+    0,
+    prefixLength
+  );
+
+  const indexedCities =
+    cityPrefixIndex.get(prefix) || [];
+
+  const candidates = [];
+
+  for (
+    const cityIndex
+    of indexedCities
+  ) {
+    const city =
+      allCities[cityIndex];
+
+    if (
+      mode === 'Domestic' &&
+      city.countryCode !== 'IN'
+    ) {
+      continue;
+    }
+
+    candidates.push(city);
+  }
+
+  return candidates;
+}
+
+function getCachedPlaceSearch(key) {
+  const cached =
+    placeSearchCache.get(key);
+
+  if (!cached) {
+    return null;
+  }
+
+  if (
+    Date.now() - cached.savedAt >
+    PLACE_SEARCH_CACHE_TTL_MS
+  ) {
+    placeSearchCache.delete(key);
+    return null;
+  }
+
+  placeSearchCache.delete(key);
+  placeSearchCache.set(key, cached);
+
+  return cached.results;
+}
+
+function savePlaceSearch(
+  key,
+  results
+) {
+  placeSearchCache.delete(key);
+
+  placeSearchCache.set(
+    key,
+    {
+      savedAt: Date.now(),
+      results
+    }
+  );
+
+  while (
+    placeSearchCache.size >
+    PLACE_SEARCH_CACHE_LIMIT
+  ) {
+    const oldestKey =
+      placeSearchCache
+        .keys()
+        .next()
+        .value;
+
+    placeSearchCache.delete(
+      oldestKey
+    );
+  }
+}
+
 function scoreCityMatch(city, query) {
   let bestScore = 0;
-
-  const officialNames =
-    new Set(
-      [
-        city.name,
-        city.asciiName
-      ]
-        .map(
-          normalizePlaceText
-        )
-        .filter(Boolean)
-    );
 
   for (
     const searchableName
     of city.searchableNames
   ) {
     const officialName =
-      officialNames.has(
-        searchableName
-      );
+      searchableName ===
+        city.normalizedName ||
+      searchableName ===
+        city.normalizedAsciiName;
 
     let score = 0;
 
@@ -1824,25 +1966,71 @@ app.get(
       });
     }
 
+    const cacheKey = [
+      mode,
+      query,
+      limit
+    ].join(':');
+
+    const cachedResults =
+      getCachedPlaceSearch(
+        cacheKey
+      );
+
+    if (cachedResults) {
+      return response.json({
+        query,
+        mode,
+        results: cachedResults
+      });
+    }
+
     const citySource =
       mode === 'Domestic'
         ? indianCities
         : allCities;
 
     const matches = [];
+    const scoredCityIds = new Set();
 
-    for (const city of citySource) {
-      const score = scoreCityMatch(
-        city,
-        query
-      );
+    function addScoredCities(cities) {
+      for (const city of cities) {
+        if (
+          scoredCityIds.has(city.id)
+        ) {
+          continue;
+        }
 
-      if (!score) continue;
+        scoredCityIds.add(city.id);
 
-      matches.push({
-        city,
-        score
-      });
+        const score = scoreCityMatch(
+          city,
+          query
+        );
+
+        if (!score) continue;
+
+        matches.push({
+          city,
+          score
+        });
+      }
+    }
+
+    addScoredCities(
+      cityCandidatesForQuery(
+        query,
+        mode
+      )
+    );
+
+    /*
+     * Prefix and word-prefix matches cover normal
+     * autocomplete usage. The fallback preserves
+     * substring and alias coverage for unusual input.
+     */
+    if (matches.length < limit) {
+      addScoredCities(citySource);
     }
 
     matches.sort((matchA, matchB) => {
@@ -1866,14 +2054,21 @@ app.get(
       );
     });
 
+    const results = matches
+      .slice(0, limit)
+      .map(({ city }) =>
+        createPlaceResult(city)
+      );
+
+    savePlaceSearch(
+      cacheKey,
+      results
+    );
+
     return response.json({
       query,
       mode,
-      results: matches
-        .slice(0, limit)
-        .map(({ city }) =>
-          createPlaceResult(city)
-        )
+      results
     });
   }
 );
@@ -1923,6 +2118,12 @@ app.get(
 
         indianCities:
           indianCities.length,
+
+        indexedPrefixes:
+          cityPrefixIndex.size,
+
+        cachedSearches:
+          placeSearchCache.size,
 
         source:
           cityDatabase.metadata.source ||
