@@ -2285,6 +2285,108 @@ function renderItinerary(
     result
   };
 
+  /*
+   * TrackWorld Trip Hub integration
+   * Stores the successfully generated trip without changing
+   * the existing planner UI, itinerary rendering or API flow.
+   */
+  try {
+    const activeTripContext = {
+      version: 1,
+
+      createdAt:
+        Date.now(),
+
+      input: {
+        ...trip
+      },
+
+      originLocation:
+        selectedPlaces.origin
+          ? { ...selectedPlaces.origin }
+          : {
+              name: trip.origin
+            },
+
+      destinationLocation:
+        selectedPlaces.destination
+          ? { ...selectedPlaces.destination }
+          : {
+              name: trip.destination
+            },
+
+      route: {
+        origin:
+          selectedPlaces.origin
+            ? { ...selectedPlaces.origin }
+            : {
+                name: trip.origin
+              },
+
+        destination:
+          selectedPlaces.destination
+            ? { ...selectedPlaces.destination }
+            : {
+                name: trip.destination
+              }
+      },
+
+      start:
+        trip.start,
+
+      end:
+        trip.end,
+
+      travellers: {
+        adults:
+          trip.adults,
+
+        children:
+          trip.children,
+
+        total:
+          trip.adults +
+          trip.children
+      },
+
+      adults:
+        trip.adults,
+
+      children:
+        trip.children,
+
+      days:
+        Array.isArray(
+          result.days
+        )
+          ? result.days.length
+          : tripDays(trip),
+
+      tripTitle:
+        result.tripTitle ||
+        '',
+
+      summary:
+        result.summary ||
+        '',
+
+      itinerary:
+        result
+    };
+
+    localStorage.setItem(
+      'trackworld-active-trip-v1',
+      JSON.stringify(
+        activeTripContext
+      )
+    );
+  } catch (error) {
+    console.warn(
+      '[trip-hub-storage]',
+      error
+    );
+  }
+
 
 
   updateChoiceSummary();
@@ -3353,6 +3455,42 @@ $('itineraryLink')
       }
     }
   );
+
+$('openTripHub')
+  ?.addEventListener(
+    'click',
+    () => {
+      if (!generatedTrip) {
+        showError(
+          'Create your itinerary before opening the Trip Hub.'
+        );
+
+        return;
+      }
+
+      /*
+       * Open the Trip Hub in its own tab.
+       *
+       * The planner remains alive in this tab with the
+       * generated itinerary still rendered. Returning from
+       * the Trip Hub therefore requires no page refresh and
+       * no itinerary regeneration.
+       */
+      const tripHubWindow =
+        window.open(
+          '/trip.html',
+          'trackworld-trip-hub'
+        );
+
+      if (tripHubWindow) {
+        tripHubWindow.focus();
+      } else {
+        window.location.href =
+          '/trip.html';
+      }
+    }
+  );
+
 
 $('print')
   .addEventListener(

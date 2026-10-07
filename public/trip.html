@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <meta
+    name="description"
+    content="TrackWorld AI Travel Planner — manage your itinerary, flights, stays, destination experiences and travel assistance."
+  />
+
+  <title>My Trip | TrackWorld Vacations</title>
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  />
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  />
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <link
+    rel="stylesheet"
+    href="/trip.css?v=1"
+  />
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <!-- ====================================================== -->
+    <!-- Sidebar                                                -->
+    <!-- ====================================================== -->
+
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">
+          TW
+        </div>
+
+        <div class="brand-copy">
+          <strong>TrackWorld</strong>
+          <span>Vacations</span>
+        </div>
+      </div>
+
+      <nav
+        class="trip-nav"
+        aria-label="Trip navigation"
+      >
+        <button
+          class="nav-item active"
+          type="button"
+          data-section="overview"
+        >
+          <span class="nav-icon">⌂</span>
+          <span>Overview</span>
+        </button>
+
+        <button
+          class="nav-item"
+          type="button"
+          data-section="itinerary"
+        >
+          <span class="nav-icon">◫</span>
+          <span>Itinerary</span>
+        </button>
+
+        <button
+          class="nav-item"
+          type="button"
+          data-section="flights"
+        >
+          <span class="nav-icon">✈</span>
+          <span>Flights</span>
+        </button>
+
+        <button
+          class="nav-item"
+          type="button"
+          data-section="stays"
+        >
+          <span class="nav-icon">⌂</span>
+          <span>Stays</span>
+        </button>
+
+        <button
+          class="nav-item"
+          type="button"
+          data-section="explore"
+        >
+          <span class="nav-icon">⌖</span>
+          <span>Explore</span>
+        </button>
+
+        <button
+          class="nav-item"
+          type="button"
+          data-section="assistant"
+        >
+          <span class="nav-icon">✦</span>
+          <span>AI Assistant</span>
+        </button>
+
+        <a
+          class="nav-item"
+          href="/trips.html"
+        >
+          <span class="nav-icon">◫</span>
+          <span>My Trips</span>
+        </a>
+
+        <a
+          class="nav-item"
+          href="/bucket-list.html"
+        >
+          <span class="nav-icon">♡</span>
+          <span>Bucket List</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a
+          class="back-link"
+          href="/"
+      id="backToPlanner"
+        >
+          ← Back to planner
+        </a>
+
+        <p>
+          TrackWorld AI Travel Planner
+        </p>
+      </div>
+    </aside>
+
+    <!-- ====================================================== -->
+    <!-- Main                                                   -->
+    <!-- ====================================================== -->
+
+    <main class="main-content">
+
+      <!-- Header -->
+
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">
+            MY TRIP
+          </p>
+
+          <h1 id="tripTitle">
+            Your journey
+          </h1>
+
+          <p
+            id="tripSubtitle"
+            class="trip-subtitle"
+          >
+            Your travel plan in one place.
+          </p>
+        </div>
+
+        <div class="topbar-actions">
+          <button
+            id="saveTripButton"
+            class="secondary-button"
+            type="button"
+          >
+            Save trip
+          </button>
+
+          <button
+            id="expertButton"
+            class="primary-button"
+            type="button"
+          >
+            Talk to a travel expert
+          </button>
+        </div>
+      </header>
+
+      <!-- ==================================================== -->
+      <!-- Overview                                             -->
+      <!-- ==================================================== -->
+
+      <section
+        id="section-overview"
+        class="page-section active"
+      >
+        <div class="hero-card">
+          <div class="hero-overlay"></div>
+
+          <div class="hero-content">
+            <p class="hero-label">
+              YOUR NEXT JOURNEY
+            </p>
+
+            <h2 id="heroDestination">
+              Destination
+            </h2>
+
+            <p id="heroDates">
+              Travel dates
+            </p>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+
+          <article class="summary-card">
+            <span class="summary-label">
+              FROM
+            </span>
+
+            <strong id="overviewOrigin">
+              —
+            </strong>
+
+            <span id="overviewOriginAirport">
+              —
+            </span>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-label">
+              DESTINATION
+            </span>
+
+            <strong id="overviewDestination">
+              —
+            </strong>
+
+            <span id="overviewDestinationAirport">
+              —
+            </span>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-label">
+              TRAVELLERS
+            </span>
+
+            <strong id="overviewTravellers">
+              —
+            </strong>
+
+            <span>
+              Travelling party
+            </span>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-label">
+              TRIP LENGTH
+            </span>
+
+            <strong id="overviewDays">
+              —
+            </strong>
+
+            <span>
+              Planned journey
+            </span>
+          </article>
+
+        </div>
+
+        <div class="dashboard-grid">
+
+          <article class="panel weather-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="panel-kicker">
+                  WEATHER
+                </span>
+
+                <h3>
+                  Destination forecast
+                </h3>
+              </div>
+
+              <span
+                id="weatherStatus"
+                class="status-pill"
+              >
+                Loading
+              </span>
+            </div>
+
+            <div
+              id="weatherContent"
+              class="weather-content"
+            >
+              <div class="skeleton large"></div>
+            </div>
+          </article>
+
+          <article class="panel currency-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="panel-kicker">
+                  CURRENCY
+                </span>
+
+                <h3>
+                  Travel money
+                </h3>
+              </div>
+            </div>
+
+            <div
+              id="currencyContent"
+              class="currency-content"
+            >
+              <div class="skeleton"></div>
+            </div>
+          </article>
+
+        </div>
+
+        <article class="panel quick-actions-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">
+                PLAN YOUR TRIP
+              </span>
+
+              <h3>
+                Everything you need
+              </h3>
+            </div>
+          </div>
+
+          <div class="quick-actions">
+
+            <button
+              type="button"
+              class="quick-action"
+              data-go="itinerary"
+            >
+              <span class="quick-action-icon">
+                ◫
+              </span>
+
+              <strong>
+                View itinerary
+              </strong>
+
+              <span>
+                See your day-by-day plan
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="quick-action"
+              data-go="flights"
+            >
+              <span class="quick-action-icon">
+                ✈
+              </span>
+
+              <strong>
+                Find flights
+              </strong>
+
+              <span>
+                Search current flight options
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="quick-action"
+              data-go="stays"
+            >
+              <span class="quick-action-icon">
+                ⌂
+              </span>
+
+              <strong>
+                Find stays
+              </strong>
+
+              <span>
+                Explore accommodation options
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="quick-action"
+              data-go="explore"
+            >
+              <span class="quick-action-icon">
+                ⌖
+              </span>
+
+              <strong>
+                Explore destination
+              </strong>
+
+              <span>
+                Discover places around you
+              </span>
+            </button>
+
+          </div>
+        </article>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- Itinerary                                            -->
+      <!-- ==================================================== -->
+
+      <section
+        id="section-itinerary"
+        class="page-section"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">
+              DAY BY DAY
+            </p>
+
+            <h2>
+              Your itinerary
+            </h2>
+          </div>
+
+          <button
+            id="printItineraryButton"
+            type="button"
+            class="secondary-button"
+          >
+            Print itinerary
+          </button>
+        </div>
+
+        <div
+          id="itineraryContent"
+          class="itinerary-content"
+        >
+          <div class="empty-state">
+            <span>◫</span>
+
+            <h3>
+              Your itinerary will appear here
+            </h3>
+
+            <p>
+              Generate a trip from the TrackWorld planner to view the full day-by-day journey.
+            </p>
+
+            <a
+              href="/"
+              class="primary-button link-button"
+            >
+              Open planner
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- Flights                                              -->
+      <!-- ==================================================== -->
+
+      <section
+        id="section-flights"
+        class="page-section"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">
+              GETTING THERE
+            </p>
+
+            <h2>
+              Flight options
+            </h2>
+
+            <p>
+              Search current flight options for your journey.
+            </p>
+          </div>
+
+          <button
+            id="searchFlightsButton"
+            class="primary-button"
+            type="button"
+          >
+            Search flights
+          </button>
+        </div>
+
+        <div
+          id="flightRoute"
+          class="route-banner"
+        >
+          <div>
+            <span>
+              ORIGIN
+            </span>
+
+            <strong id="flightOrigin">
+              —
+            </strong>
+          </div>
+
+          <div class="route-line">
+            <span></span>
+            ✈
+            <span></span>
+          </div>
+
+          <div>
+            <span>
+              DESTINATION
+            </span>
+
+            <strong id="flightDestination">
+              —
+            </strong>
+          </div>
+        </div>
+
+        <div
+          id="flightsContent"
+          class="results-list"
+        >
+          <div class="empty-state compact">
+            <span>✈</span>
+
+            <h3>
+              Ready when you are
+            </h3>
+
+            <p>
+              Search to view current flight options for this trip.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- Stays                                                -->
+      <!-- ==================================================== -->
+
+      <section
+        id="section-stays"
+        class="page-section"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">
+              WHERE TO STAY
+            </p>
+
+            <h2>
+              Stays
+            </h2>
+
+            <p>
+              Explore accommodation options for your destination.
+            </p>
+          </div>
+
+          <button
+            id="searchStaysButton"
+            class="primary-button"
+            type="button"
+          >
+            Search stays
+          </button>
+        </div>
+
+        <div
+          id="staysContent"
+          class="card-results-grid"
+        >
+          <div class="empty-state compact full-width">
+            <span>⌂</span>
+
+            <h3>
+              Find the right stay
+            </h3>
+
+            <p>
+              Search for accommodation options based on your trip dates.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- Explore                                              -->
+      <!-- ==================================================== -->
+
+      <section
+        id="section-explore"
+        class="page-section"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">
+              DISCOVER
+            </p>
+
+            <h2>
+              Explore your destination
+            </h2>
+
+            <p>
+              Attractions, food, shopping and experiences around your destination.
+            </p>
+          </div>
+
+          <button
+            id="refreshExploreButton"
+            class="secondary-button"
+            type="button"
+          >
+            Refresh
+          </button>
+        </div>
+
+        <div class="explore-tabs">
+          <button
+            type="button"
+            class="explore-tab active"
+            data-explore-category="attractions"
+          >
+            Attractions
+          </button>
+
+          <button
+            type="button"
+            class="explore-tab"
+            data-explore-category="restaurants"
+          >
+            Food
+          </button>
+
+          <button
+            type="button"
+            class="explore-tab"
+            data-explore-category="shopping"
+          >
+            Shopping
+          </button>
+
+          <button
+            type="button"
+            class="explore-tab"
+            data-explore-category="experiences"
+          >
+            Experiences
+          </button>
+        </div>
+
+        <div
+          id="exploreContent"
+          class="card-results-grid"
+        >
+          <div class="empty-state compact full-width">
+            <span>⌖</span>
+
+            <h3>
+              Discover the destination
+            </h3>
+
+            <p>
+              Destination recommendations will appear here.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- AI Assistant                                         -->
+      <!-- ==================================================== -->
+
+      <section
+        id="section-assistant"
+        class="page-section"
+      >
+        <div class="assistant-layout">
+
+          <div class="assistant-copy">
+            <p class="eyebrow">
+              TRACKWORLD AI
+            </p>
+
+            <h2>
+              Your travel assistant
+            </h2>
+
+            <p>
+              Get help with your destination, itinerary, travel planning and trip questions.
+            </p>
+
+            <div class="assistant-points">
+              <div>
+                <span>✓</span>
+                Ask questions about your trip
+              </div>
+
+              <div>
+                <span>✓</span>
+                Get destination guidance
+              </div>
+
+              <div>
+                <span>✓</span>
+                Review your travel plan
+              </div>
+            </div>
+
+            <button
+              id="openAssistantButton"
+              class="primary-button large-button"
+              type="button"
+            >
+              Start AI Travel Assistant
+            </button>
+          </div>
+
+          <div class="assistant-visual">
+            <div class="assistant-orbit orbit-one"></div>
+            <div class="assistant-orbit orbit-two"></div>
+
+            <div class="assistant-core">
+              ✦
+            </div>
+
+            <span class="assistant-label">
+              TrackWorld AI
+            </span>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- Expert Dialog                                            -->
+  <!-- ======================================================== -->
+
+  <dialog
+    id="expertDialog"
+    class="expert-dialog"
+  >
+    <button
+      id="closeExpertDialog"
+      type="button"
+      class="dialog-close"
+      aria-label="Close"
+    >
+      ×
+    </button>
+
+    <p class="eyebrow">
+      TRACKWORLD VACATIONS
+    </p>
+
+    <h2>
+      Continue with a travel expert
+    </h2>
+
+    <p>
+      Your trip details can be used as the starting point for a personalised consultation with the TrackWorld team.
+    </p>
+
+    <div
+      id="expertTripSummary"
+      class="expert-trip-summary"
+    ></div>
+
+    <a
+      href="/"
+      class="primary-button link-button"
+    >
+      Return to planner
+    </a>
+  </dialog>
+
+  <!-- ======================================================== -->
+  <!-- Toast                                                    -->
+  <!-- ======================================================== -->
+
+  <div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite"
+  ></div>
+
+  <script
+    type="module"
+    src="/js/trip-page.js?v=1"
+  ></script>
+</body>
+</html>

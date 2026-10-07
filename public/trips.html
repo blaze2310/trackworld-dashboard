@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="description"
+    content="View and manage your saved TrackWorld trips."
+  >
+
+  <title>My Trips | TrackWorld Vacations</title>
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/trips.css?v=1"
+  >
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">
+          TW
+        </div>
+
+        <div class="brand-copy">
+          <strong>TrackWorld</strong>
+          <span>Vacations</span>
+        </div>
+      </div>
+
+      <nav class="side-nav">
+        <a
+          class="nav-item"
+          href="/"
+        >
+          <span>⌂</span>
+          <span>Trip Planner</span>
+        </a>
+
+        <a
+          class="nav-item"
+          href="/trip.html"
+        >
+          <span>✦</span>
+          <span>Current Trip</span>
+        </a>
+
+        <a
+          class="nav-item active"
+          href="/trips.html"
+        >
+          <span>◫</span>
+          <span>My Trips</span>
+        </a>
+
+        <a
+          class="nav-item"
+          href="/bucket-list.html"
+        >
+          <span>♡</span>
+          <span>Bucket List</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a
+          class="back-link"
+          href="/"
+        >
+          ← Back to planner
+        </a>
+
+        <p>
+          TrackWorld AI Travel Planner
+        </p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">
+            YOUR JOURNEYS
+          </p>
+
+          <h1>
+            My Trips
+          </h1>
+
+          <p class="subtitle">
+            Your saved travel plans in one place.
+          </p>
+        </div>
+
+        <a
+          class="primary-button"
+          href="/"
+        >
+          + Plan a new trip
+        </a>
+      </header>
+
+      <section
+        class="summary-row"
+        aria-label="Saved trip summary"
+      >
+        <article class="summary-card">
+          <span>SAVED TRIPS</span>
+
+          <strong id="savedTripCount">
+            0
+          </strong>
+
+          <p>
+            Travel plans saved in this browser
+          </p>
+        </article>
+
+        <article class="summary-card">
+          <span>NEXT JOURNEY</span>
+
+          <strong id="nextDestination">
+            —
+          </strong>
+
+          <p id="nextJourneyDate">
+            No upcoming journey
+          </p>
+        </article>
+      </section>
+
+      <section class="trips-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">
+              SAVED
+            </p>
+
+            <h2>
+              Your travel plans
+            </h2>
+          </div>
+        </div>
+
+        <div
+          id="tripsGrid"
+          class="trips-grid"
+        ></div>
+
+        <div
+          id="emptyState"
+          class="empty-state"
+          hidden
+        >
+          <div class="empty-icon">
+            ✈
+          </div>
+
+          <h2>
+            No saved trips yet
+          </h2>
+
+          <p>
+            Create an itinerary and save it to keep
+            your journey here.
+          </p>
+
+          <a
+            class="primary-button"
+            href="/"
+          >
+            Plan your first trip
+          </a>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite"
+  ></div>
+
+  <script
+    type="module"
+    src="/js/trips-page.js?v=1"
+  ></script>
+</body>
+</html>

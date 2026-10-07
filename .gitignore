@@ -29,3 +29,14 @@ temp/
 # Build output
 dist/
 build/
+# Local development
+.env
+.env.*
+!.env.example
+node_modules/
+.DS_Store
+
+# Local backup files
+*.backup-*
+*.backup-before-*
+*.before-*

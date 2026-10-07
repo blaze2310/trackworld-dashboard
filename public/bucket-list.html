@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="description"
+    content="Manage your TrackWorld travel bucket list."
+  >
+
+  <title>Bucket List | TrackWorld Vacations</title>
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/bucket-list.css?v=1"
+  >
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">
+          TW
+        </div>
+
+        <div class="brand-copy">
+          <strong>TrackWorld</strong>
+          <span>Vacations</span>
+        </div>
+      </div>
+
+      <nav class="side-nav">
+        <a
+          class="nav-item"
+          href="/"
+        >
+          <span>⌂</span>
+          <span>Trip Planner</span>
+        </a>
+
+        <a
+          class="nav-item"
+          href="/trip.html"
+        >
+          <span>✦</span>
+          <span>Current Trip</span>
+        </a>
+
+        <a
+          class="nav-item"
+          href="/trips.html"
+        >
+          <span>◫</span>
+          <span>My Trips</span>
+        </a>
+
+        <a
+          class="nav-item active"
+          href="/bucket-list.html"
+        >
+          <span>♡</span>
+          <span>Bucket List</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a
+          class="back-link"
+          href="/"
+        >
+          ← Back to planner
+        </a>
+
+        <p>
+          TrackWorld AI Travel Planner
+        </p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">
+            DREAM DESTINATIONS
+          </p>
+
+          <h1>
+            Bucket List
+          </h1>
+
+          <p class="subtitle">
+            Save places you want to explore next.
+          </p>
+        </div>
+
+        <a
+          class="primary-button"
+          href="/"
+        >
+          + Plan a new trip
+        </a>
+      </header>
+
+      <section
+        class="summary-row"
+        aria-label="Bucket list summary"
+      >
+        <article class="summary-card">
+          <span>DESTINATIONS SAVED</span>
+
+          <strong id="bucketCount">
+            0
+          </strong>
+
+          <p>
+            Places waiting to become journeys
+          </p>
+        </article>
+
+        <article class="summary-card">
+          <span>LATEST DREAM</span>
+
+          <strong id="latestDestination">
+            —
+          </strong>
+
+          <p id="latestDestinationCountry">
+            Add a destination to get started
+          </p>
+        </article>
+      </section>
+
+      <section class="add-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">
+              ADD DESTINATION
+            </p>
+
+            <h2>
+              Where do you want to go?
+            </h2>
+          </div>
+        </div>
+
+        <form
+          id="bucketForm"
+          class="bucket-form"
+        >
+          <div class="field">
+            <label for="destinationName">
+              Destination
+            </label>
+
+            <input
+              id="destinationName"
+              name="destinationName"
+              type="text"
+              placeholder="e.g. Switzerland"
+              autocomplete="off"
+              required
+            >
+          </div>
+
+          <div class="field">
+            <label for="destinationCountry">
+              Country
+            </label>
+
+            <input
+              id="destinationCountry"
+              name="destinationCountry"
+              type="text"
+              placeholder="e.g. Switzerland"
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="field field-note">
+            <label for="destinationNote">
+              Note
+            </label>
+
+            <input
+              id="destinationNote"
+              name="destinationNote"
+              type="text"
+              placeholder="e.g. Winter trip, snow and scenic trains"
+              autocomplete="off"
+            >
+          </div>
+
+          <button
+            class="primary-button submit-button"
+            type="submit"
+          >
+            ♡ Add to Bucket List
+          </button>
+        </form>
+      </section>
+
+      <section class="bucket-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">
+              SAVED
+            </p>
+
+            <h2>
+              Your dream destinations
+            </h2>
+          </div>
+        </div>
+
+        <div
+          id="bucketGrid"
+          class="bucket-grid"
+        ></div>
+
+        <div
+          id="emptyState"
+          class="empty-state"
+          hidden
+        >
+          <div class="empty-icon">
+            ♡
+          </div>
+
+          <h2>
+            Your bucket list is empty
+          </h2>
+
+          <p>
+            Add destinations you would love to visit
+            and turn them into future TrackWorld trips.
+          </p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite"
+  ></div>
+
+  <script
+    type="module"
+    src="/js/bucket-list-page.js?v=1"
+  ></script>
+</body>
+</html>
