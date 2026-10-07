@@ -3570,6 +3570,21 @@ function locationRequestValue(
       location.name,
   };
 
+  if (location.geoNameId) {
+    result.geoNameId =
+      location.geoNameId;
+  }
+
+  if (location.city) {
+    result.city =
+      location.city;
+  }
+
+  if (location.region) {
+    result.region =
+      location.region;
+  }
+
   if (location.country) {
     result.country =
       location.country;
