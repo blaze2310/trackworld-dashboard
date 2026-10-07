@@ -2123,12 +2123,120 @@ function renderStays() {
     return;
   }
 
+  const visibleStays =
+    stays.slice(0, 12);
+
   elements.staysContent
     .innerHTML =
-    stays
-      .slice(0, 12)
+    visibleStays
       .map(renderStay)
       .join("");
+
+  hydrateStayImages(
+    visibleStays
+  );
+}
+
+function hydrateStayImages(
+  stays
+) {
+  const cards =
+    elements.staysContent
+      ?.querySelectorAll(
+        ".result-card"
+      ) || [];
+
+  cards.forEach(
+    (card, index) => {
+      const stay =
+        stays[index];
+
+      const image =
+        card.querySelector(
+          ".result-card-image img"
+        );
+
+      if (!image) {
+        return;
+      }
+
+      const candidates = [
+        ...(
+          Array.isArray(
+            stay?.images
+          )
+            ? stay.images
+            : []
+        ),
+
+        stay?.image,
+        stay?.imageUrl,
+        stay?.thumbnail,
+        stay?.photo,
+      ]
+        .map(clean)
+        .filter(Boolean)
+        .filter(
+          (url, position, list) =>
+            list.indexOf(url) ===
+            position
+        );
+
+      if (!candidates.length) {
+        return;
+      }
+
+      let candidateIndex = 0;
+
+      const fallback =
+        image.nextElementSibling;
+
+      image.onerror = null;
+
+      image.addEventListener(
+        "load",
+        () => {
+          image.style.display =
+            "";
+
+          if (fallback) {
+            fallback.style.display =
+              "none";
+          }
+        }
+      );
+
+      image.addEventListener(
+        "error",
+        () => {
+          candidateIndex += 1;
+
+          if (
+            candidateIndex <
+            candidates.length
+          ) {
+            image.src =
+              candidates[
+                candidateIndex
+              ];
+
+            return;
+          }
+
+          image.style.display =
+            "none";
+
+          if (fallback) {
+            fallback.style.display =
+              "grid";
+          }
+        }
+      );
+
+      image.src =
+        candidates[0];
+    }
+  );
 }
 
 function renderStay(stay) {
@@ -2189,10 +2297,6 @@ function renderStay(stay) {
           alt="${escapeHtml(name)}"
           loading="lazy"
           referrerpolicy="no-referrer"
-          onerror="
-            this.style.display='none';
-            this.nextElementSibling.style.display='grid';
-          "
         >
 
         <span

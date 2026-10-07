@@ -2961,6 +2961,10 @@ function normaliseHotelImages(
       property
         ?.hotel_images
     ),
+
+    property?.image,
+
+    property?.thumbnail,
   ];
 
   const images = [];
@@ -2981,10 +2985,10 @@ function normaliseHotelImages(
           )
         : cleanString(
             image
-              ?.thumbnail ||
-              image
-                ?.original_image ||
-              image?.url,
+              ?.original_image ||
+              image?.image ||
+              image?.url ||
+              image?.thumbnail,
             2000
           );
 
