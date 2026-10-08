@@ -200,6 +200,16 @@
         class="page-section active"
       >
         <div class="hero-card">
+          <div
+            class="hero-visual"
+            aria-hidden="true"
+          >
+            <img
+              src="/assets/travel.jpg"
+              alt=""
+            >
+          </div>
+
           <div class="hero-overlay"></div>
 
           <div class="hero-content">
@@ -497,13 +507,25 @@
             </p>
           </div>
 
-          <button
-            id="searchFlightsButton"
-            class="primary-button"
-            type="button"
-          >
-            Search flights
-          </button>
+          <div class="flight-search-actions">
+            <button
+              id="searchDepartureFlightsButton"
+              class="flight-direction-button active"
+              type="button"
+            >
+              <span>Departure</span>
+              <strong id="departureFlightDate">—</strong>
+            </button>
+
+            <button
+              id="searchReturnFlightsButton"
+              class="flight-direction-button"
+              type="button"
+            >
+              <span>Return</span>
+              <strong id="returnFlightDate">—</strong>
+            </button>
+          </div>
         </div>
 
         <div
@@ -762,41 +784,141 @@
   <!-- ======================================================== -->
 
   <dialog
-    id="expertDialog"
     class="expert-dialog"
+    id="expertDialog"
   >
     <button
-      id="closeExpertDialog"
       type="button"
       class="dialog-close"
+      id="closeExpertDialog"
       aria-label="Close"
     >
       ×
     </button>
 
     <p class="eyebrow">
-      TRACKWORLD VACATIONS
+      Personal travel assistance
     </p>
 
-    <h2>
-      Continue with a travel expert
-    </h2>
+    <h2>Meet your travel expert</h2>
 
     <p>
-      Your trip details can be used as the starting point for a personalised consultation with the TrackWorld team.
+      Prepare a consultation request for later sharing.
+      Nothing will be sent and no appointment will be reserved.
     </p>
 
     <div
-      id="expertTripSummary"
-      class="expert-trip-summary"
-    ></div>
-
-    <a
-      href="/"
-      class="primary-button link-button"
+      class="expert-plan-card"
     >
-      Return to planner
-    </a>
+      <div
+        class="expert-trip-summary"
+        id="expertTripSummary"
+      ></div>
+
+      <small>
+        PLAN REFERENCE
+      </small>
+
+      <strong
+        id="expertPlanReference"
+      >
+        Active Trip Hub itinerary
+      </strong>
+    </div>
+
+    <form
+      id="expertAppointmentForm"
+    >
+      <div class="expert-form-grid">
+        <label>
+          <span>Your name</span>
+
+          <input
+            id="expertCustomerName"
+            type="text"
+            autocomplete="name"
+            required
+          />
+        </label>
+
+        <label>
+          <span>Email address</span>
+
+          <input
+            id="expertEmail"
+            type="email"
+            autocomplete="email"
+            required
+          />
+        </label>
+
+        <label>
+          <span>Phone number</span>
+
+          <input
+            id="expertPhone"
+            type="tel"
+            autocomplete="tel"
+          />
+        </label>
+
+        <label>
+          <span>Preferred consultation date</span>
+
+          <input
+            id="expertPreferredDate"
+            type="date"
+            required
+          />
+        </label>
+
+        <label>
+          <span>Preferred time</span>
+
+          <select
+            id="expertPreferredTime"
+          >
+            <option value="Morning">
+              Morning
+            </option>
+
+            <option value="Afternoon">
+              Afternoon
+            </option>
+
+            <option value="Evening">
+              Evening
+            </option>
+
+            <option value="No preference">
+              No preference
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <button
+        type="submit"
+        class="expert-submit-button"
+      >
+        Prepare consultation request
+      </button>
+
+      <p
+        class="expert-request-status"
+        id="expertAppointmentStatus"
+        role="status"
+      ></p>
+
+      <button
+        type="button"
+        id="expertDownloadRequest"
+        class="expert-download-button"
+        hidden
+      >
+        Download request
+      </button>
+    </form>
   </dialog>
 
   <!-- ======================================================== -->

@@ -9,6 +9,8 @@ const STORAGE_KEYS = {
   legacyItineraryPrefix: "trackworld-itinerary-v4:",
 };
 
+let expertAppointmentRequest = "";
+
 const state = {
   trip: null,
   itinerary: null,
@@ -16,6 +18,7 @@ const state = {
   weather: null,
   currency: null,
   flights: null,
+  flightDirection: "departure",
   stays: null,
   explore: null,
   exploreCategory: "attractions",
@@ -78,18 +81,30 @@ function cacheElements() {
     "flightOrigin",
     "flightDestination",
     "flightsContent",
+    "searchDepartureFlightsButton",
+    "searchReturnFlightsButton",
+    "departureFlightDate",
+    "returnFlightDate",
     "staysContent",
     "exploreContent",
     "saveTripButton",
     "expertButton",
     "printItineraryButton",
-    "searchFlightsButton",
     "searchStaysButton",
     "refreshExploreButton",
     "openAssistantButton",
     "expertDialog",
     "closeExpertDialog",
     "expertTripSummary",
+    "expertPlanReference",
+    "expertAppointmentForm",
+    "expertCustomerName",
+    "expertEmail",
+    "expertPhone",
+    "expertPreferredDate",
+    "expertPreferredTime",
+    "expertAppointmentStatus",
+    "expertDownloadRequest",
     "toast",
   ];
 
@@ -232,6 +247,67 @@ function bindActions() {
       }
     );
 
+  elements.expertDialog
+    ?.addEventListener(
+      "click",
+      (event) => {
+        if (
+          event.target ===
+          elements.expertDialog
+        ) {
+          elements.expertDialog
+            .close();
+        }
+      }
+    );
+
+  elements.expertAppointmentForm
+    ?.addEventListener(
+      "submit",
+      (event) => {
+        event.preventDefault();
+
+        if (
+          !elements.expertAppointmentForm
+            .reportValidity()
+        ) {
+          return;
+        }
+
+        expertAppointmentRequest =
+          buildExpertAppointmentRequest();
+
+        if (
+          elements.expertAppointmentStatus
+        ) {
+          elements.expertAppointmentStatus
+            .textContent =
+              "Your request is ready to download. Nothing has been sent or reserved.";
+        }
+
+        if (
+          elements.expertDownloadRequest
+        ) {
+          elements.expertDownloadRequest
+            .hidden = false;
+        }
+      }
+    );
+
+  elements.expertDownloadRequest
+    ?.addEventListener(
+      "click",
+      () => {
+        if (
+          expertAppointmentRequest
+        ) {
+          downloadExpertAppointmentRequest(
+            expertAppointmentRequest
+          );
+        }
+      }
+    );
+
   elements.printItineraryButton
     ?.addEventListener(
       "click",
@@ -240,10 +316,24 @@ function bindActions() {
       }
     );
 
-  elements.searchFlightsButton
+  elements.searchDepartureFlightsButton
     ?.addEventListener(
       "click",
-      loadFlights
+      () => {
+        loadFlights(
+          "departure"
+        );
+      }
+    );
+
+  elements.searchReturnFlightsButton
+    ?.addEventListener(
+      "click",
+      () => {
+        loadFlights(
+          "return"
+        );
+      }
     );
 
   elements.searchStaysButton
@@ -850,6 +940,20 @@ function renderTripContext() {
       destination
     )
   );
+
+  setText(
+    elements.departureFlightDate,
+    trip.start
+      ? shortDate(trip.start)
+      : "—"
+  );
+
+  setText(
+    elements.returnFlightDate,
+    trip.end
+      ? shortDate(trip.end)
+      : "—"
+  );
 }
 
 function renderNoTrip() {
@@ -1165,28 +1269,57 @@ function renderWeather() {
       : "Forecast"
   );
 
-  const first =
-    days[0];
+  const highs =
+    days
+      .map(
+        (day) =>
+          numberOrNull(
+            day.temperatureMaxC ??
+            day.maxTemperature ??
+            day.temperatureMax ??
+            day.maxTemp ??
+            day.high
+          )
+      )
+      .filter(
+        (value) =>
+          value !== null
+      );
 
-  const high =
-    first.maxTemperature ??
-    first.temperatureMax ??
-    first.maxTemp ??
-    first.high;
+  const lows =
+    days
+      .map(
+        (day) =>
+          numberOrNull(
+            day.temperatureMinC ??
+            day.minTemperature ??
+            day.temperatureMin ??
+            day.minTemp ??
+            day.low
+          )
+      )
+      .filter(
+        (value) =>
+          value !== null
+      );
 
-  const low =
-    first.minTemperature ??
-    first.temperatureMin ??
-    first.minTemp ??
-    first.low;
+  const averageHigh =
+    highs.length
+      ? highs.reduce(
+          (sum, value) =>
+            sum + value,
+          0
+        ) / highs.length
+      : null;
 
-  const description =
-    clean(
-      first.description ??
-        first.condition ??
-        first.weather
-    ) ||
-    "Destination forecast";
+  const averageLow =
+    lows.length
+      ? lows.reduce(
+          (sum, value) =>
+            sum + value,
+          0
+        ) / lows.length
+      : null;
 
   elements.weatherContent
     .innerHTML =
@@ -1194,24 +1327,22 @@ function renderWeather() {
       <div class="weather-current">
         <div class="weather-temperature">
           ${
-            numberOrNull(high) !==
-            null
-              ? `${Math.round(Number(high))}°`
+            averageHigh !== null
+              ? `${Math.round(averageHigh)}°C`
               : "—"
           }
         </div>
 
         <div class="weather-description">
           <strong>
-            ${escapeHtml(description)}
+            Average high
           </strong>
 
           <span>
             ${
-              numberOrNull(low) !==
-              null
-                ? `Low ${Math.round(Number(low))}°C`
-                : "Forecast for your travel dates"
+              averageLow !== null
+                ? `Average low ${Math.round(averageLow)}°C · ${days.length}-day forecast`
+                : `${days.length}-day forecast`
             }
           </span>
         </div>
@@ -1219,7 +1350,6 @@ function renderWeather() {
 
       <div class="weather-days">
         ${days
-          .slice(0, 6)
           .map(
             (day) =>
               renderWeatherDay(
@@ -1238,12 +1368,14 @@ function renderWeatherDay(day) {
     "";
 
   const high =
+    day.temperatureMaxC ??
     day.maxTemperature ??
     day.temperatureMax ??
     day.maxTemp ??
     day.high;
 
   const low =
+    day.temperatureMinC ??
     day.minTemperature ??
     day.temperatureMin ??
     day.minTemp ??
@@ -1280,6 +1412,160 @@ function renderWeatherDay(day) {
 /* Currency                                                                   */
 /* -------------------------------------------------------------------------- */
 
+const currencyByCountryCode = {
+  AE: "AED",
+  AR: "ARS",
+  AT: "EUR",
+  AU: "AUD",
+  BE: "EUR",
+  BG: "BGN",
+  BR: "BRL",
+  CA: "CAD",
+  CH: "CHF",
+  CN: "CNY",
+  CY: "EUR",
+  CZ: "CZK",
+  DE: "EUR",
+  DK: "DKK",
+  EE: "EUR",
+  EG: "EGP",
+  ES: "EUR",
+  FI: "EUR",
+  FR: "EUR",
+  GB: "GBP",
+  GR: "EUR",
+  HK: "HKD",
+  HR: "EUR",
+  HU: "HUF",
+  ID: "IDR",
+  IE: "EUR",
+  IL: "ILS",
+  IN: "INR",
+  IS: "ISK",
+  IT: "EUR",
+  JP: "JPY",
+  KR: "KRW",
+  LT: "EUR",
+  LU: "EUR",
+  LV: "EUR",
+  MA: "MAD",
+  MC: "EUR",
+  MT: "EUR",
+  MX: "MXN",
+  MY: "MYR",
+  NL: "EUR",
+  NO: "NOK",
+  NP: "NPR",
+  NZ: "NZD",
+  PH: "PHP",
+  PL: "PLN",
+  PT: "EUR",
+  QA: "QAR",
+  RO: "RON",
+  SA: "SAR",
+  SE: "SEK",
+  SG: "SGD",
+  SI: "EUR",
+  SK: "EUR",
+  TH: "THB",
+  TR: "TRY",
+  TW: "TWD",
+  US: "USD",
+  VN: "VND",
+  ZA: "ZAR",
+};
+
+const currencyByCityName = {
+  dubai: "AED",
+  "abu dhabi": "AED",
+  sharjah: "AED",
+  delhi: "INR",
+  "new delhi": "INR",
+  mumbai: "INR",
+  bengaluru: "INR",
+  bangalore: "INR",
+  chennai: "INR",
+  kolkata: "INR",
+  hyderabad: "INR",
+  goa: "INR",
+  london: "GBP",
+  "new york": "USD",
+  "los angeles": "USD",
+  "san francisco": "USD",
+  lasvegas: "USD",
+  "las vegas": "USD",
+  tokyo: "JPY",
+  osaka: "JPY",
+  singapore: "SGD",
+  bangkok: "THB",
+  "kuala lumpur": "MYR",
+  bali: "IDR",
+  sydney: "AUD",
+  melbourne: "AUD",
+  toronto: "CAD",
+  vancouver: "CAD",
+  zurich: "CHF",
+  geneva: "CHF",
+  auckland: "NZD",
+  "cape town": "ZAR",
+  johannesburg: "ZAR",
+  paris: "EUR",
+  lyon: "EUR",
+  marseille: "EUR",
+  nice: "EUR",
+  berlin: "EUR",
+  munich: "EUR",
+  frankfurt: "EUR",
+  rome: "EUR",
+  milan: "EUR",
+  madrid: "EUR",
+  barcelona: "EUR",
+  lisbon: "EUR",
+  amsterdam: "EUR",
+  brussels: "EUR",
+  vienna: "EUR",
+  dublin: "EUR",
+  athens: "EUR",
+};
+
+function currencyForLocation(location) {
+  const explicit =
+    clean(
+      location?.currency ??
+        location?.currencyCode
+    ).toUpperCase();
+
+  if (explicit) {
+    return explicit;
+  }
+
+  const countryCode =
+    clean(
+      location?.countryCode
+    ).toUpperCase();
+
+  if (
+    countryCode &&
+    currencyByCountryCode[
+      countryCode
+    ]
+  ) {
+    return currencyByCountryCode[
+      countryCode
+    ];
+  }
+
+  const city =
+    clean(
+      location?.name
+    ).toLowerCase();
+
+  return (
+    currencyByCityName[city] ||
+    ""
+  );
+}
+
 async function loadCurrency() {
   if (
     !state.trip ||
@@ -1288,107 +1574,19 @@ async function loadCurrency() {
     return;
   }
 
+  const origin =
+    state.trip.route.origin;
+
   const destination =
-    state.trip.route
-      .destination;
+    state.trip.route.destination;
 
-  const destinationName =
-    clean(
-      destination?.name
-    ).toLowerCase();
-
-  const countryCode =
-    clean(
-      destination?.countryCode
-    ).toUpperCase();
-
-  const explicitCurrency =
-    clean(
-      destination?.currency ??
-      destination?.currencyCode
-    ).toUpperCase();
-
-  const currencyByCountry = {
-    AE: "AED",
-    IN: "INR",
-    US: "USD",
-    GB: "GBP",
-    JP: "JPY",
-    SG: "SGD",
-    TH: "THB",
-    MY: "MYR",
-    ID: "IDR",
-    AU: "AUD",
-    CA: "CAD",
-    CH: "CHF",
-    NZ: "NZD",
-    ZA: "ZAR",
-
-    FR: "EUR",
-    DE: "EUR",
-    IT: "EUR",
-    ES: "EUR",
-    PT: "EUR",
-    NL: "EUR",
-    BE: "EUR",
-    AT: "EUR",
-    IE: "EUR",
-    FI: "EUR",
-    GR: "EUR",
-    LU: "EUR",
-  };
-
-  const currencyByDestination = {
-    dubai: "AED",
-    "abu dhabi": "AED",
-    sharjah: "AED",
-    london: "GBP",
-    "new york": "USD",
-    "los angeles": "USD",
-    "san francisco": "USD",
-    tokyo: "JPY",
-    osaka: "JPY",
-    singapore: "SGD",
-    bangkok: "THB",
-    "kuala lumpur": "MYR",
-    bali: "IDR",
-    sydney: "AUD",
-    melbourne: "AUD",
-    toronto: "CAD",
-    vancouver: "CAD",
-    zurich: "CHF",
-    geneva: "CHF",
-    auckland: "NZD",
-    "cape town": "ZAR",
-    johannesburg: "ZAR",
-
-    paris: "EUR",
-    lyon: "EUR",
-    marseille: "EUR",
-    nice: "EUR",
-    berlin: "EUR",
-    munich: "EUR",
-    frankfurt: "EUR",
-    rome: "EUR",
-    milan: "EUR",
-    madrid: "EUR",
-    barcelona: "EUR",
-    lisbon: "EUR",
-    amsterdam: "EUR",
-    brussels: "EUR",
-    vienna: "EUR",
-    dublin: "EUR",
-    athens: "EUR",
-  };
+  const source =
+    currencyForLocation(origin);
 
   const target =
-    explicitCurrency ||
-    currencyByCountry[
-      countryCode
-    ] ||
-    currencyByDestination[
-      destinationName
-    ];
+    currencyForLocation(
+      destination
+    );
 
   if (!target) {
     elements.currencyContent
@@ -1396,6 +1594,47 @@ async function loadCurrency() {
       notice(
         "Destination currency information is not available."
       );
+
+    return;
+  }
+
+  /*
+   * If the origin currency cannot be resolved, we can still
+   * show the destination currency without inventing a base.
+   */
+  if (!source) {
+    state.currency = {
+      base: null,
+      target,
+      rateAvailable: false,
+    };
+
+    renderCurrency(
+      target,
+      null
+    );
+
+    return;
+  }
+
+  /*
+   * Domestic/same-currency route:
+   * no external conversion request is necessary.
+   */
+  if (source === target) {
+    state.currency = {
+      base: source,
+      target,
+      rate: 1,
+      convertedAmount: 1,
+      rateAvailable: true,
+      sameCurrency: true,
+    };
+
+    renderCurrency(
+      target,
+      source
+    );
 
     return;
   }
@@ -1408,29 +1647,39 @@ async function loadCurrency() {
           method: "POST",
 
           body: {
-            from: "INR",
-            to: target,
+            from: target,
+            to: source,
             amount: 1,
           },
         }
       );
 
-    state.currency =
+    const currencyData =
       unwrap(response);
 
-    renderCurrency(target);
+    state.currency =
+      currencyData?.currency ??
+      currencyData;
+
+    renderCurrency(
+      target,
+      source
+    );
   } catch (error) {
     state.currency = {
-      base: "INR",
+      base: source,
       target,
       rateAvailable: false,
     };
 
-    renderCurrency(target);
+    renderCurrency(
+      target,
+      source
+    );
   }
 }
 
-function renderCurrency(target) {
+function renderCurrency(target, source = null) {
   const currency =
     state.currency ?? {};
 
@@ -1450,37 +1699,125 @@ function renderCurrency(target) {
     converted ??
     rate;
 
-  if (value === null) {
-    elements.currencyContent
-      .innerHTML =
-      `
-        <div class="currency-rate">
-          <strong>
-            ${escapeHtml(target)}
-          </strong>
+  const origin =
+    clean(
+      state.trip?.route
+        ?.origin?.name
+    ) || "Origin";
 
-          <span>
-            Destination currency
-          </span>
-        </div>
-      `;
+  const destination =
+    clean(
+      state.trip?.route
+        ?.destination?.name
+    ) || "Destination";
 
-    return;
+  const currencySymbols = {
+    AED: "د.إ",
+    AUD: "A$",
+    CAD: "C$",
+    CHF: "CHF",
+    CNY: "¥",
+    EUR: "€",
+    GBP: "£",
+    HKD: "HK$",
+    IDR: "Rp",
+    INR: "₹",
+    JPY: "¥",
+    KRW: "₩",
+    MYR: "RM",
+    NZD: "NZ$",
+    PHP: "₱",
+    QAR: "ر.ق",
+    SAR: "﷼",
+    SGD: "S$",
+    THB: "฿",
+    TRY: "₺",
+    TWD: "NT$",
+    USD: "$",
+    VND: "₫",
+    ZAR: "R",
+  };
+
+  const targetSymbol =
+    currencySymbols[target] ||
+    target;
+
+  const sourceSymbol =
+    currencySymbols[source] ||
+    source ||
+    "";
+
+  let conversionHtml = "";
+
+  if (
+    source &&
+    source === target
+  ) {
+    conversionHtml = `
+      <div class="currency-conversion">
+        <small>Exchange rate</small>
+        <strong>
+          Same currency — no conversion needed
+        </strong>
+        <span class="currency-route">
+          ${escapeHtml(origin)}
+          →
+          ${escapeHtml(destination)}
+        </span>
+      </div>
+    `;
+  } else if (
+    source &&
+    value !== null
+  ) {
+    conversionHtml = `
+      <div class="currency-conversion">
+        <small>Exchange rate</small>
+        <strong>
+          ${escapeHtml(targetSymbol)}1
+          ${escapeHtml(target)}
+          ≈
+          ${escapeHtml(sourceSymbol)}${Number(value).toLocaleString(
+            undefined,
+            {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }
+          )}
+          ${escapeHtml(source)}
+        </strong>
+        <span class="currency-route">
+          ${escapeHtml(origin)}
+          →
+          ${escapeHtml(destination)}
+        </span>
+      </div>
+    `;
   }
 
   elements.currencyContent
-    .innerHTML =
-    `
+    .innerHTML = `
       <div class="currency-rate">
-        <strong>
-          ${escapeHtml(
-            formatNumber(value)
-          )} ${escapeHtml(target)}
-        </strong>
+        <div class="currency-identity">
+          <span class="currency-symbol">
+            ${escapeHtml(
+              targetSymbol
+            )}
+          </span>
 
-        <span>
-          Approximate value of ₹1 INR based on the latest available exchange-rate data.
-        </span>
+          <div>
+            <strong>
+              ${escapeHtml(target)}
+            </strong>
+
+            <span class="currency-place">
+              ${escapeHtml(destination)}
+              currency
+            </span>
+          </div>
+        </div>
+
+        ${conversionHtml}
       </div>
     `;
 }
@@ -1489,7 +1826,9 @@ function renderCurrency(target) {
 /* Flights                                                                    */
 /* -------------------------------------------------------------------------- */
 
-async function loadFlights() {
+async function loadFlights(
+  direction = "departure"
+) {
   if (!state.trip) {
     showToast(
       "Generate a trip first."
@@ -1497,8 +1836,64 @@ async function loadFlights() {
     return;
   }
 
+  const isReturn =
+    direction === "return";
+
+  state.flightDirection =
+    isReturn
+      ? "return"
+      : "departure";
+
+  const trip =
+    state.trip;
+
+  const origin =
+    isReturn
+      ? trip.route.destination
+      : trip.route.origin;
+
+  const destination =
+    isReturn
+      ? trip.route.origin
+      : trip.route.destination;
+
+  const travelDate =
+    isReturn
+      ? trip.end
+      : trip.start;
+
   const button =
-    elements.searchFlightsButton;
+    isReturn
+      ? elements
+          .searchReturnFlightsButton
+      : elements
+          .searchDepartureFlightsButton;
+
+  elements
+    .searchDepartureFlightsButton
+    ?.classList.toggle(
+      "active",
+      !isReturn
+    );
+
+  elements
+    .searchReturnFlightsButton
+    ?.classList.toggle(
+      "active",
+      isReturn
+    );
+
+  setText(
+    elements.flightOrigin,
+    flightLocationLabel(origin)
+  );
+
+  setText(
+    elements.flightDestination,
+    flightLocationLabel(
+      destination
+    )
+  );
 
   setButtonLoading(
     button,
@@ -1509,13 +1904,12 @@ async function loadFlights() {
   elements.flightsContent
     .innerHTML =
     loading(
-      "Searching flight options"
+      isReturn
+        ? "Searching return flights"
+        : "Searching departure flights"
     );
 
   try {
-    const trip =
-      state.trip;
-
     const response =
       await api(
         "/api/flights",
@@ -1525,20 +1919,16 @@ async function loadFlights() {
           body: {
             origin:
               locationRequestValue(
-                trip.route.origin
+                origin
               ),
 
             destination:
               locationRequestValue(
-                trip.route
-                  .destination
+                destination
               ),
 
             departureDate:
-              trip.start,
-
-            returnDate:
-              trip.end,
+              travelDate,
 
             adults:
               trip.adults,
@@ -1575,7 +1965,23 @@ async function loadFlights() {
     setButtonLoading(
       button,
       false,
-      "Search flights"
+      isReturn
+        ? "Return"
+        : "Departure"
+    );
+
+    const dateElement =
+      isReturn
+        ? elements.returnFlightDate
+        : elements.departureFlightDate;
+
+    setText(
+      dateElement,
+      travelDate
+        ? shortDate(
+            travelDate
+          )
+        : "—"
     );
   }
 }
@@ -1607,8 +2013,14 @@ function renderFlights() {
     return;
   }
 
+  const isReturn =
+    state.flightDirection ===
+      "return";
+
   const departureDate =
-    state.trip?.start;
+    isReturn
+      ? state.trip?.end
+      : state.trip?.start;
 
   const formattedDepartureDate =
     departureDate
@@ -1616,6 +2028,11 @@ function renderFlights() {
           departureDate
         )
       : "";
+
+  const directionLabel =
+    isReturn
+      ? "Return flight"
+      : "Departure flight";
 
   elements.flightsContent
     .innerHTML =
@@ -1625,7 +2042,9 @@ function renderFlights() {
           ? `
             <div class="flight-results-date">
               <span>
-                Departure
+                ${escapeHtml(
+                  directionLabel
+                )}
               </span>
 
               <strong>
@@ -1740,7 +2159,11 @@ function renderFlight(flight) {
         ?.id
     ) ||
     airportCode(
-      state.trip.route.origin
+      state.flightDirection ===
+        "return"
+        ? state.trip.route
+            .destination
+        : state.trip.route.origin
     );
 
   const destinationCode =
@@ -1752,8 +2175,11 @@ function renderFlight(flight) {
         ?.id
     ) ||
     airportCode(
-      state.trip.route
-        .destination
+      state.flightDirection ===
+        "return"
+        ? state.trip.route.origin
+        : state.trip.route
+            .destination
     );
 
   const durationMinutes =
@@ -3359,7 +3785,263 @@ function saveCurrentTrip() {
 /* Travel Expert                                                              */
 /* -------------------------------------------------------------------------- */
 
+function expertText(value, fallback = "Not provided") {
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return fallback;
+  }
+
+  return String(value);
+}
+
+function expertLocationName(location) {
+  if (!location) {
+    return "Not provided";
+  }
+
+  if (typeof location === "string") {
+    return location;
+  }
+
+  return (
+    location.city ||
+    location.name ||
+    location.label ||
+    location.displayName ||
+    "Not provided"
+  );
+}
+
+function expertList(value, fallback = "None") {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+
+  const items =
+    value
+      .map((item) =>
+        typeof item === "string"
+          ? item
+          : item?.name ||
+            item?.title ||
+            ""
+      )
+      .filter(Boolean);
+
+  return (
+    items.join(", ") ||
+    fallback
+  );
+}
+
+function expertTripValues() {
+  const trip =
+    state.trip || {};
+
+  const route =
+    trip.route || {};
+
+  const preferences =
+    trip.preferences || {};
+
+  const travellers =
+    trip.travellers || {};
+
+  const origin =
+    expertLocationName(
+      route.origin ||
+      trip.origin
+    );
+
+  const destination =
+    expertLocationName(
+      route.destination ||
+      trip.destination
+    );
+
+  const adults =
+    Number(
+      travellers.adults ??
+      trip.adults ??
+      1
+    );
+
+  const children =
+    Number(
+      travellers.children ??
+      trip.children ??
+      0
+    );
+
+  return {
+    trip,
+    preferences,
+    origin,
+    destination,
+    adults,
+    children
+  };
+}
+
+function expertPlanReference() {
+  const { trip } =
+    expertTripValues();
+
+  return (
+    trip.requestId ||
+    trip.reference ||
+    trip.itinerary?.requestId ||
+    trip.itinerary?.reference ||
+    trip.title ||
+    trip.itinerary?.title ||
+    "Active Trip Hub itinerary"
+  );
+}
+
+function buildExpertAppointmentRequest() {
+  const {
+    trip,
+    preferences,
+    origin,
+    destination,
+    adults,
+    children
+  } = expertTripValues();
+
+  const interests =
+    preferences.interests ??
+    trip.interests;
+
+  const services =
+    preferences.services ??
+    trip.services;
+
+  const occasion =
+    preferences.occasion ??
+    trip.occasion;
+
+  const hotel =
+    preferences.hotel ??
+    preferences.stay ??
+    trip.hotel;
+
+  const pace =
+    preferences.pace ??
+    trip.pace;
+
+  const comments =
+    preferences.comments ??
+    preferences.requirements ??
+    trip.comments;
+
+  const lines = [
+    "TRACKWORLD CONSULTATION REQUEST — NOT SENT",
+    "",
+    `Plan reference: ${expertPlanReference()}`,
+    `Name: ${elements.expertCustomerName?.value.trim() || "Not provided"}`,
+    `Email: ${elements.expertEmail?.value.trim() || "Not provided"}`,
+    `Phone: ${elements.expertPhone?.value.trim() || "Not provided"}`,
+    `Preferred date: ${elements.expertPreferredDate?.value || "Not provided"}`,
+    `Preferred time: ${elements.expertPreferredTime?.value || "No preference"}`,
+    "",
+    `Route: ${origin} to ${destination}`,
+    `Dates: ${expertText(trip.start)} to ${expertText(trip.end)}`,
+    `Travellers: ${adults} adults, ${children} children`,
+    `Occasion: ${expertText(occasion, "Not specified")}`,
+    `Stay: ${expertText(hotel, "Not specified")}`,
+    `Pace: ${expertText(pace, "Not specified")}`,
+    `Interests: ${expertList(interests, "Open")}`,
+    `Services: ${expertList(services, "None")}`,
+    `Requirements: ${expertText(comments, "None")}`,
+    "",
+    "This consultation request was prepared locally in TrackWorld.",
+    "Nothing has been sent, booked or reserved."
+  ];
+
+  return lines.join("\n");
+}
+
+function downloadExpertAppointmentRequest(text) {
+  const blob =
+    new Blob(
+      [text],
+      {
+        type:
+          "text/plain;charset=utf-8"
+      }
+    );
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const link =
+    document.createElement("a");
+
+  link.href = url;
+
+  link.download =
+    "TrackWorld-Vacations-consultation-request.txt";
+
+  document.body.appendChild(
+    link
+  );
+
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(url);
+}
+
 function openExpertDialog() {
+  expertAppointmentRequest = "";
+
+  if (
+    elements.expertAppointmentStatus
+  ) {
+    elements.expertAppointmentStatus
+      .textContent = "";
+  }
+
+  if (
+    elements.expertDownloadRequest
+  ) {
+    elements.expertDownloadRequest
+      .hidden = true;
+  }
+
+  if (
+    elements.expertPreferredDate
+  ) {
+    const today =
+      new Date();
+
+    const localToday =
+      [
+        today.getFullYear(),
+        String(
+          today.getMonth() + 1
+        ).padStart(2, "0"),
+        String(
+          today.getDate()
+        ).padStart(2, "0")
+      ].join("-");
+
+    elements.expertPreferredDate
+      .min = localToday;
+  }
+
+  if (
+    elements.expertPlanReference
+  ) {
+    elements.expertPlanReference
+      .textContent =
+        expertPlanReference();
+  }
+
+
   if (
     !elements.expertDialog
   ) {
@@ -3435,10 +4117,10 @@ function openAssistant() {
   }
 
   const agentId =
-    "agent_3101m2cn3wdhfhxvekebk9rjdzvz";
+    "agent_6601m4d2fbz3e8ks75pwep5hspee";
 
   const branchId =
-    "agtbrch_7001m2cn3xkce349s7q6ds4tcw1e";
+    "agtbrch_4001m4d2fe0jegj94qv846y7vgr4";
 
   const url =
     new URL(
@@ -3455,10 +4137,170 @@ function openAssistant() {
     branchId
   );
 
+  const tripContext =
+    buildAssistantTripContext();
+
+  if (tripContext) {
+    url.searchParams.set(
+      "var_trip_context",
+      tripContext
+    );
+  }
+
   window.open(
     url.toString(),
     "_blank",
     "noopener,noreferrer"
+  );
+}
+
+function buildAssistantTripContext() {
+  if (!state.trip) {
+    return "";
+  }
+
+  const trip =
+    state.trip;
+
+  const origin =
+    trip.route.origin;
+
+  const destination =
+    trip.route.destination;
+
+  const itineraryDays =
+    Array.isArray(
+      state.itinerary?.days
+    )
+      ? state.itinerary.days
+      : [];
+
+  const itinerarySummary =
+    itineraryDays
+      .map(
+        (day, index) => {
+          const activities =
+            Array.isArray(
+              day?.items
+            )
+              ? day.items
+                  .map((item) => {
+                    const time =
+                      clean(
+                        item?.time
+                      );
+
+                    const title =
+                      clean(
+                        item?.title
+                      );
+
+                    return [
+                      time,
+                      title,
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
+                  })
+                  .filter(Boolean)
+                  .join("; ")
+              : "";
+
+          return [
+            `Day ${index + 1}`,
+            clean(day?.title),
+            clean(day?.area),
+            activities,
+          ]
+            .filter(Boolean)
+            .join(" | ");
+        }
+      )
+      .join("\n");
+
+  const input =
+    trip.input ?? {};
+
+  const interests =
+    Array.isArray(
+      input.interests
+    )
+      ? input.interests.join(", ")
+      : clean(
+          input.interests
+        );
+
+  const services =
+    Array.isArray(
+      input.services
+    )
+      ? input.services.join(", ")
+      : clean(
+          input.services
+        );
+
+  const context = [
+    "CURRENT TRACKWORLD TRIP",
+    `Trip: ${
+      trip.tripTitle ||
+      destination.name
+    }`,
+    `Route: ${
+      origin.name
+    } (${airportCode(origin) || "airport pending"}) to ${
+      destination.name
+    } (${airportCode(destination) || "airport pending"})`,
+    `Travel dates: ${
+      trip.start
+    } to ${
+      trip.end
+    }`,
+    `Duration: ${
+      trip.days
+    } days`,
+    `Travellers: ${
+      travellerLabel(
+        trip.adults,
+        trip.children
+      )
+    }`,
+    trip.summary
+      ? `Trip summary: ${trip.summary}`
+      : "",
+    input.budget
+      ? `Budget: INR ${input.budget}`
+      : "",
+    input.budgetType
+      ? `Budget type: ${input.budgetType}`
+      : "",
+    input.hotel
+      ? `Hotel preference: ${input.hotel}`
+      : "",
+    input.pace
+      ? `Travel pace: ${input.pace}`
+      : "",
+    input.occasion
+      ? `Occasion: ${input.occasion}`
+      : "",
+    interests
+      ? `Interests: ${interests}`
+      : "",
+    services
+      ? `Requested services: ${services}`
+      : "",
+    input.comments
+      ? `Traveller comments: ${input.comments}`
+      : "",
+    itinerarySummary
+      ? `PLANNED ITINERARY:\n${itinerarySummary}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return context.slice(
+    0,
+    7000
   );
 }
 

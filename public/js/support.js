@@ -19,10 +19,10 @@ const DEFAULT_ASSISTANT_URL =
   "https://elevenlabs.io/app/talk-to";
 
 const DEFAULT_AGENT_ID =
-  "agent_3101m2cn3wdhfhxvekebk9rjdzvz";
+  "agent_6601m4d2fbz3e8ks75pwep5hspee";
 
 const DEFAULT_BRANCH_ID =
-  "agtbrch_7001m2cn3xkce349s7q6ds4tcw1e";
+  "agtbrch_4001m4d2fe0jegj94qv846y7vgr4";
 
 let cachedStatus = null;
 

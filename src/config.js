@@ -241,13 +241,13 @@ const FRANKFURTER_TIMEOUT_MS =
 const ELEVENLABS_AGENT_ID =
   envString(
     "ELEVENLABS_AGENT_ID",
-    "agent_3101m2cn3wdhfhxvekebk9rjdzvz"
+    "agent_6601m4d2fbz3e8ks75pwep5hspee"
   );
 
 const ELEVENLABS_BRANCH_ID =
   envString(
     "ELEVENLABS_BRANCH_ID",
-    "agtbrch_7001m2cn3xkce349s7q6ds4tcw1e"
+    "agtbrch_4001m4d2fe0jegj94qv846y7vgr4"
   );
 
 const ELEVENLABS_SUPPORT_URL =

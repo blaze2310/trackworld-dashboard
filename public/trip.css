@@ -11,8 +11,8 @@
   --black: #121212;
   --charcoal: #242424;
   --text: #252525;
-  --muted: #747474;
-  --muted-light: #9b9b9b;
+  --muted: #555555;
+  --muted-light: #707070;
 
   --white: #ffffff;
   --off-white: #faf9f7;
@@ -725,16 +725,36 @@ a {
 }
 
 .weather-days {
-  display: grid;
-  grid-template-columns:
-    repeat(auto-fit, minmax(110px, 1fr));
-
+  display: flex;
   gap: 9px;
 
   margin-top: 20px;
+  padding-bottom: 8px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+
+.weather-days::-webkit-scrollbar {
+  height: 6px;
+}
+
+.weather-days::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #d7d3ce;
+}
+
+.weather-days::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .weather-day {
+  flex: 0 0 118px;
+
   padding: 14px;
 
   border-radius: 12px;
@@ -2242,4 +2262,968 @@ a {
 .flight-results-date strong {
   color: #171717;
   font-weight: 700;
+}
+
+
+/* ==========================================================================
+   Flight Direction Search
+   ========================================================================== */
+
+.flight-search-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.flight-direction-button {
+  min-width: 128px;
+  min-height: 58px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+
+  padding: 9px 16px;
+
+  border: 1px solid var(--border);
+  border-radius: 11px;
+
+  background: var(--white);
+  color: var(--text);
+
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.flight-direction-button:hover {
+  transform: translateY(-1px);
+
+  border-color: #d2cec8;
+
+  box-shadow: var(--shadow-sm);
+}
+
+.flight-direction-button.active {
+  border-color: var(--red);
+
+  background: var(--red);
+  color: var(--white);
+
+  box-shadow:
+    0 8px 20px
+    rgba(215, 25, 32, 0.17);
+}
+
+.flight-direction-button span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  opacity: 0.72;
+}
+
+.flight-direction-button strong {
+  margin-top: 3px;
+
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.flight-results-date {
+  gap: 14px;
+
+  margin:
+    8px
+    0
+    20px;
+
+  padding:
+    0
+    4px;
+}
+
+.flight-results-date span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.flight-results-date strong {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .flight-search-actions {
+    width: 100%;
+  }
+
+  .flight-direction-button {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .flight-direction-button {
+    padding:
+      9px
+      12px;
+  }
+
+  .flight-direction-button strong {
+    font-size: 14px;
+  }
+
+  .flight-results-date {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+
+
+/* ==========================================================================
+   Travel Expert Consultation Request
+   ========================================================================== */
+
+.expert-plan-card {
+  display: grid;
+  margin: 20px 0 22px;
+  padding: 17px 19px;
+
+  border:
+    1px solid
+    var(--border);
+  border-left:
+    4px solid
+    var(--red);
+  border-radius: 13px;
+
+  background:
+    var(--surface);
+}
+
+.expert-plan-card .expert-trip-summary {
+  margin: 0 0 9px;
+  padding: 0;
+
+  background: transparent;
+
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.expert-plan-card small {
+  color: var(--muted);
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.expert-plan-card > strong {
+  margin-top: 4px;
+
+  color: var(--red);
+
+  font-size: 12px;
+}
+
+.expert-form-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.expert-form-grid label {
+  display: grid;
+  gap: 7px;
+
+  color: var(--text);
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.expert-form-grid input,
+.expert-form-grid select {
+  width: 100%;
+  min-height: 46px;
+
+  padding: 0 13px;
+
+  border:
+    1px solid
+    var(--border);
+  border-radius: 10px;
+
+  background: var(--white);
+  color: var(--text);
+
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+
+  outline: none;
+}
+
+.expert-form-grid input:focus,
+.expert-form-grid select:focus {
+  border-color:
+    rgba(215, 25, 32, 0.65);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(215, 25, 32, 0.1);
+}
+
+.expert-submit-button {
+  width: 100%;
+  min-height: 50px;
+
+  margin-top: 20px;
+
+  border: 0;
+  border-radius: 10px;
+
+  background: var(--red);
+  color: var(--white);
+
+  font-size: 12px;
+  font-weight: 800;
+
+  box-shadow:
+    0 10px 24px
+    rgba(215, 25, 32, 0.18);
+}
+
+.expert-request-status {
+  min-height: 18px;
+
+  margin: 13px 0 9px;
+
+  color: var(--muted);
+
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.expert-download-button {
+  min-height: 42px;
+
+  padding: 0 16px;
+
+  border:
+    1px solid
+    rgba(215, 25, 32, 0.28);
+  border-radius: 9px;
+
+  background:
+    rgba(215, 25, 32, 0.04);
+  color: var(--red);
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.expert-download-button:hover {
+  border-color: var(--red);
+
+  background:
+    rgba(215, 25, 32, 0.08);
+}
+
+@media (max-width: 620px) {
+  .expert-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* TrackWorld Trip Hub hero visual enhancement */
+
+#saveTripButton {
+  width: max-content;
+  min-width: max-content;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hero-card {
+  min-height: 330px;
+  align-items: center;
+  isolation: isolate;
+}
+
+.hero-content {
+  width: min(52%, 680px);
+}
+
+.hero-visual {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 52%;
+  overflow: hidden;
+}
+
+.hero-visual img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(0.88) contrast(1.04);
+  transform: scale(1.01);
+}
+
+.hero-visual::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      #202020 0%,
+      rgba(32, 32, 32, 0.92) 7%,
+      rgba(32, 32, 32, 0.5) 29%,
+      rgba(32, 32, 32, 0.08) 62%,
+      rgba(0, 0, 0, 0.12) 100%
+    ),
+    linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.24),
+      transparent 55%
+    );
+  content: "";
+}
+
+.hero-card::before {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hero-overlay {
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(17, 17, 17, 0.96) 0%,
+      rgba(25, 25, 25, 0.90) 36%,
+      rgba(25, 25, 25, 0.38) 61%,
+      rgba(0, 0, 0, 0.04) 100%
+    );
+}
+
+.hero-content {
+  z-index: 2;
+}
+
+@media (max-width: 900px) {
+  .hero-content {
+    width: min(65%, 680px);
+  }
+
+  .hero-visual {
+    width: 58%;
+  }
+}
+
+@media (max-width: 680px) {
+  .hero-card {
+    min-height: 280px;
+    align-items: center;
+  }
+
+  .hero-content {
+    width: 100%;
+  }
+
+  .hero-visual {
+    width: 100%;
+    opacity: 0.48;
+  }
+
+  .hero-overlay {
+    background:
+      linear-gradient(
+        90deg,
+        rgba(15, 15, 15, 0.96),
+        rgba(15, 15, 15, 0.64)
+      );
+  }
+}
+
+/* ==========================================================================
+   Final Trip Hub header + hero blending refinement
+   ========================================================================== */
+
+/* Keep both top-right actions clean and on one line */
+.topbar-actions {
+  flex-shrink: 0;
+}
+
+#saveTripButton,
+#expertButton {
+  width: max-content;
+  min-width: max-content;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#expertButton {
+  padding-left: 22px;
+  padding-right: 22px;
+}
+
+/* Give the destination image more room to blend into the dark hero */
+.hero-visual {
+  left: 34%;
+  right: 0;
+  width: auto;
+}
+
+/* Softer image treatment */
+.hero-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter:
+    saturate(0.88)
+    contrast(1.02)
+    brightness(0.94);
+}
+
+/* Long progressive fade across the image itself */
+.hero-visual::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    linear-gradient(
+      90deg,
+      #1c1c1c 0%,
+      rgba(28, 28, 28, 0.98) 8%,
+      rgba(28, 28, 28, 0.92) 17%,
+      rgba(28, 28, 28, 0.76) 29%,
+      rgba(28, 28, 28, 0.52) 42%,
+      rgba(28, 28, 28, 0.27) 56%,
+      rgba(28, 28, 28, 0.10) 70%,
+      rgba(28, 28, 28, 0.02) 84%,
+      transparent 100%
+    );
+}
+
+/* Whole-card overlay removes any remaining visual seam */
+.hero-overlay {
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(17, 17, 17, 0.98) 0%,
+      rgba(17, 17, 17, 0.96) 24%,
+      rgba(17, 17, 17, 0.78) 38%,
+      rgba(17, 17, 17, 0.46) 51%,
+      rgba(17, 17, 17, 0.16) 65%,
+      rgba(17, 17, 17, 0.03) 78%,
+      transparent 90%
+    );
+}
+
+/* Keep text comfortably inside the dark/readable area */
+.hero-content {
+  width: min(45%, 600px);
+}
+
+/* Responsive behaviour */
+@media (max-width: 900px) {
+  .hero-visual {
+    left: 22%;
+  }
+
+  .hero-content {
+    width: 60%;
+  }
+
+  #expertButton {
+    padding-left: 17px;
+    padding-right: 17px;
+  }
+}
+
+@media (max-width: 680px) {
+  .hero-visual {
+    left: 0;
+    width: 100%;
+  }
+
+  .hero-content {
+    width: 100%;
+  }
+
+  .hero-overlay {
+    background:
+      linear-gradient(
+        90deg,
+        rgba(15, 15, 15, 0.96) 0%,
+        rgba(15, 15, 15, 0.80) 55%,
+        rgba(15, 15, 15, 0.55) 100%
+      );
+  }
+
+  #saveTripButton,
+  #expertButton {
+    min-width: 0;
+  }
+}
+
+/* Final hero image width + seamless fade correction */
+
+.hero-visual {
+  left: auto;
+  right: 0;
+  width: 52%;
+}
+
+/* Fade the original-width image smoothly into the dark panel */
+.hero-visual::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    linear-gradient(
+      90deg,
+      #1c1c1c 0%,
+      rgba(28, 28, 28, 0.98) 8%,
+      rgba(28, 28, 28, 0.90) 18%,
+      rgba(28, 28, 28, 0.72) 30%,
+      rgba(28, 28, 28, 0.48) 43%,
+      rgba(28, 28, 28, 0.27) 56%,
+      rgba(28, 28, 28, 0.12) 69%,
+      rgba(28, 28, 28, 0.04) 82%,
+      transparent 100%
+    );
+}
+
+/* Extend the dark card slightly across the image edge
+   so the 52% boundary cannot appear as a hard line */
+.hero-overlay {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(17, 17, 17, 0.98) 0%,
+      rgba(17, 17, 17, 0.97) 43%,
+      rgba(17, 17, 17, 0.90) 49%,
+      rgba(17, 17, 17, 0.68) 55%,
+      rgba(17, 17, 17, 0.40) 62%,
+      rgba(17, 17, 17, 0.18) 70%,
+      rgba(17, 17, 17, 0.05) 80%,
+      transparent 90%
+    );
+}
+
+@media (max-width: 900px) {
+  .hero-visual {
+    left: auto;
+    right: 0;
+    width: 58%;
+  }
+}
+
+@media (max-width: 680px) {
+  .hero-visual {
+    left: 0;
+    width: 100%;
+  }
+}
+
+/* ==========================================================================
+   Final seamless hero image blend
+   ========================================================================== */
+
+.hero-visual {
+  left: auto;
+  right: 0;
+  width: 58%;
+  overflow: hidden;
+
+  /* The image itself gradually appears, removing the hard starting edge */
+  -webkit-mask-image:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.08) 5%,
+      rgba(0, 0, 0, 0.25) 11%,
+      rgba(0, 0, 0, 0.52) 19%,
+      rgba(0, 0, 0, 0.78) 29%,
+      #000 42%
+    );
+
+  mask-image:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.08) 5%,
+      rgba(0, 0, 0, 0.25) 11%,
+      rgba(0, 0, 0, 0.52) 19%,
+      rgba(0, 0, 0, 0.78) 29%,
+      #000 42%
+    );
+}
+
+/* The mask now handles the seam, so avoid creating another edge */
+.hero-visual::after {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(17, 17, 17, 0.32) 0%,
+      rgba(17, 17, 17, 0.16) 25%,
+      transparent 55%
+    );
+}
+
+/* Gentle card-wide tone rather than a second hard transition */
+.hero-overlay {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(17, 17, 17, 0.98) 0%,
+      rgba(17, 17, 17, 0.96) 37%,
+      rgba(17, 17, 17, 0.72) 47%,
+      rgba(17, 17, 17, 0.38) 58%,
+      rgba(17, 17, 17, 0.12) 70%,
+      transparent 84%
+    );
+}
+
+@media (max-width: 900px) {
+  .hero-visual {
+    width: 64%;
+  }
+}
+
+@media (max-width: 680px) {
+  .hero-visual {
+    left: 0;
+    width: 100%;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+/* ==========================================================================
+   Final readability + currency card refinement
+   ========================================================================== */
+
+/*
+ * Improve secondary-text contrast throughout the Trip Hub.
+ * Keeps the primary/secondary hierarchy, but makes supporting copy easier
+ * to read on white and off-white backgrounds.
+ */
+:root {
+  --muted: #5f5f5f;
+  --muted-light: #787878;
+}
+
+/* Small tertiary metadata should remain secondary, but not washed out. */
+.sidebar-footer p {
+  color: #5f5f5f;
+}
+
+/*
+ * Currency card:
+ * remove unnecessary vertical dead space and use the available area
+ * more naturally.
+ */
+.currency-content {
+  min-height: 0;
+}
+
+.currency-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.currency-panel .currency-content {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+}
+
+.currency-rate {
+  width: 100%;
+}
+
+.currency-rate strong {
+  line-height: 1.05;
+}
+
+/* Keep currency supporting text clearly readable. */
+.currency-rate span {
+  color: var(--muted);
+}
+
+/*
+ * Slightly strengthen very small supporting text throughout the interface.
+ * This affects weather details, airports, card metadata, flight metadata,
+ * itinerary descriptions and similar secondary information.
+ */
+.summary-card > span:last-child,
+.weather-description span,
+.weather-day span,
+.quick-action > span:last-child,
+.itinerary-day-header p,
+.itinerary-item-copy p,
+.flight-price span {
+  color: var(--muted);
+}
+
+
+
+/* TRACKWORLD OVERVIEW CARD REFINEMENTS */
+
+/* Currency card — use the full panel more intentionally. */
+.currency-panel .currency-content {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+}
+
+.currency-rate {
+  width: 100%;
+  min-height: 190px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  padding-top: 6px;
+}
+
+.currency-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.currency-symbol {
+  width: 58px;
+  height: 58px;
+
+  flex: 0 0 58px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 16px;
+
+  background: var(--red-soft);
+  color: var(--red);
+
+  font-family: "Playfair Display", serif;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.currency-identity > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.currency-identity strong {
+  color: var(--black);
+
+  font-family: "Playfair Display", serif;
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.currency-place {
+  color: var(--muted);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.currency-conversion {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  margin-top: 22px;
+  padding: 14px 16px;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  background: var(--off-white);
+}
+
+.currency-conversion small {
+  color: var(--muted);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.currency-conversion strong {
+  color: var(--black);
+
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.currency-note {
+  margin-top: 10px;
+
+  color: var(--muted);
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Quick actions — larger visual anchor without enlarging the cards. */
+.quick-action {
+  justify-content: center;
+}
+
+.quick-action-icon {
+  width: 52px;
+  height: 52px;
+
+  margin-bottom: 14px;
+
+  border-radius: 14px;
+
+  font-size: 23px;
+
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.quick-action:hover .quick-action-icon {
+  transform: scale(1.08);
+}
+
+.quick-action strong {
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.quick-action > span:last-child {
+  margin-top: 7px;
+
+  font-size: 12px;
+  line-height: 1.45;
+}
+/* FINAL OVERVIEW POLISH */
+
+/* Hide weather status pill: FORECAST / CACHED */
+.weather-panel .status-pill,
+.weather-panel .weather-status,
+.weather-panel [data-weather-status] {
+  display: none !important;
+}
+
+/* Currency card: larger symbol + tighter vertical composition */
+.currency-rate {
+  min-height: 0;
+  justify-content: flex-start;
+  gap: 18px;
+}
+
+.currency-symbol {
+  width: 76px;
+  height: 76px;
+  flex: 0 0 76px;
+
+  border-radius: 18px;
+
+  font-family: "Playfair Display", serif;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.currency-identity {
+  gap: 18px;
+}
+
+.currency-identity strong {
+  font-size: 42px;
+  line-height: 1;
+}
+
+.currency-place {
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.currency-conversion {
+  margin-top: 4px;
+}
+
+.currency-note {
+  margin-top: 0;
+}
+
+/* Currency card final refinement */
+
+/* Make only the currency symbol itself much larger */
+.currency-symbol {
+  font-size: 46px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+/* Remove exchange-rate / unavailable message completely */
+.currency-conversion,
+.currency-note {
+  display: none !important;
+}
+
+/* Keep currency content compact without changing card dimensions */
+.currency-rate {
+  margin-bottom: 0 !important;
+}
+
+/* Route-aware exchange rate display */
+.currency-conversion {
+  display: flex !important;
+}
+
+.currency-conversion:empty {
+  display: none !important;
+}
+
+.currency-note {
+  display: none !important;
+}
+
+.currency-route {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
 }
