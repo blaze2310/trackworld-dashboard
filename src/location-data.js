@@ -42,6 +42,7 @@ let airports = [];
 let cityMetadata = {};
 
 let cityByGeoNameId = new Map();
+let cityPrefixIndex = new Map();
 let airportsByCountry = new Map();
 let airportByIata = new Map();
 
@@ -271,12 +272,43 @@ async function loadData() {
     }
 
     cityByGeoNameId = new Map();
+    cityPrefixIndex = new Map();
 
     for (const city of cities) {
       cityByGeoNameId.set(
         city.geoNameId,
         city
       );
+
+      const prefixes = new Set();
+
+      for (const value of [
+        city.name,
+        city.asciiName,
+        ...city.aliases,
+      ]) {
+        const normalised =
+          normaliseText(value);
+
+        if (normalised.length >= 2) {
+          prefixes.add(
+            normalised.slice(0, 2)
+          );
+        }
+      }
+
+      for (const prefix of prefixes) {
+        if (!cityPrefixIndex.has(prefix)) {
+          cityPrefixIndex.set(
+            prefix,
+            []
+          );
+        }
+
+        cityPrefixIndex
+          .get(prefix)
+          .push(city);
+      }
     }
 
     airportByIata = new Map();
@@ -433,9 +465,20 @@ export async function searchCities(
       options.countryCode
     ).toUpperCase();
 
+  const prefix =
+    q.slice(0, 2);
+
+  const indexedCandidates =
+    cityPrefixIndex.get(prefix);
+
+  const candidates =
+    indexedCandidates?.length
+      ? indexedCandidates
+      : cities;
+
   const best = [];
 
-  for (const city of cities) {
+  for (const city of candidates) {
     if (
       countryCode &&
       city.countryCode !==
