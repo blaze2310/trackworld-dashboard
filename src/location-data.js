@@ -146,27 +146,6 @@ function normaliseCity(raw) {
     latitude: lat,
     longitude: lon,
     searchable,
-    searchName: normaliseText(cityName),
-    searchAscii: normaliseText(
-      clean(asciiName) || cityName
-    ),
-    searchCountry: normaliseText(
-      countryName
-    ),
-    searchRegion: normaliseText(
-      adminName
-    ),
-    searchAliases:
-      aliases.map(normaliseText),
-    populationScore:
-      toInteger(population, 0) > 0
-        ? Math.min(
-            120,
-            Math.log10(
-              toInteger(population, 0) + 1
-            ) * 15
-          )
-        : 0,
   };
 }
 
@@ -374,49 +353,52 @@ function scoreCity(city, query) {
     return -Infinity;
   }
 
+  const name = normaliseText(city.name);
+  const asciiName = normaliseText(city.asciiName);
+  const country = normaliseText(city.country);
+  const region = normaliseText(city.region);
+  const aliases = city.aliases.map(normaliseText);
+
   let score = 0;
 
-  if (city.searchName === q) {
+  if (name === q) {
     score += 1000;
   }
 
-  if (city.searchAscii === q) {
+  if (asciiName === q) {
     score += 950;
   }
 
-  if (
-    city.searchName.startsWith(q)
-  ) {
+  if (name.startsWith(q)) {
     score += 700;
   }
 
-  if (
-    city.searchAscii.startsWith(q)
-  ) {
+  if (asciiName.startsWith(q)) {
     score += 650;
   }
 
-  if (
-    city.searchAliases.includes(q)
-  ) {
+  if (aliases.includes(q)) {
     score += 600;
   }
 
-  if (
-    city.searchable.includes(q)
-  ) {
+  if (city.searchable.includes(q)) {
     score += 300;
   }
 
-  if (city.searchCountry === q) {
+  if (country === q) {
     score += 100;
   }
 
-  if (city.searchRegion === q) {
+  if (region === q) {
     score += 80;
   }
 
-  score += city.populationScore;
+  if (city.population > 0) {
+    score += Math.min(
+      120,
+      Math.log10(city.population + 1) * 15
+    );
+  }
 
   return score;
 }
