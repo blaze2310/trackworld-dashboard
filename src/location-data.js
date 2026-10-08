@@ -146,6 +146,27 @@ function normaliseCity(raw) {
     latitude: lat,
     longitude: lon,
     searchable,
+    searchName: normaliseText(cityName),
+    searchAscii: normaliseText(
+      clean(asciiName) || cityName
+    ),
+    searchCountry: normaliseText(
+      countryName
+    ),
+    searchRegion: normaliseText(
+      adminName
+    ),
+    searchAliases:
+      aliases.map(normaliseText),
+    populationScore:
+      toInteger(population, 0) > 0
+        ? Math.min(
+            120,
+            Math.log10(
+              toInteger(population, 0) + 1
+            ) * 15
+          )
+        : 0,
   };
 }
 
@@ -347,48 +368,37 @@ function publicCity(city) {
 /* -------------------------------------------------------------------------- */
 
 function scoreCity(city, query) {
-  const q = normaliseText(query);
+  const q = query;
 
   if (!q) {
     return -Infinity;
   }
 
-  const name =
-    normaliseText(city.name);
-
-  const ascii =
-    normaliseText(city.asciiName);
-
-  const country =
-    normaliseText(city.country);
-
-  const region =
-    normaliseText(city.region);
-
-  const aliases =
-    city.aliases.map(
-      normaliseText
-    );
-
   let score = 0;
 
-  if (name === q) {
+  if (city.searchName === q) {
     score += 1000;
   }
 
-  if (ascii === q) {
+  if (city.searchAscii === q) {
     score += 950;
   }
 
-  if (name.startsWith(q)) {
+  if (
+    city.searchName.startsWith(q)
+  ) {
     score += 700;
   }
 
-  if (ascii.startsWith(q)) {
+  if (
+    city.searchAscii.startsWith(q)
+  ) {
     score += 650;
   }
 
-  if (aliases.includes(q)) {
+  if (
+    city.searchAliases.includes(q)
+  ) {
     score += 600;
   }
 
@@ -398,22 +408,15 @@ function scoreCity(city, query) {
     score += 300;
   }
 
-  if (country === q) {
+  if (city.searchCountry === q) {
     score += 100;
   }
 
-  if (region === q) {
+  if (city.searchRegion === q) {
     score += 80;
   }
 
-  if (city.population > 0) {
-    score += Math.min(
-      120,
-      Math.log10(
-        city.population + 1
-      ) * 15
-    );
-  }
+  score += city.populationScore;
 
   return score;
 }
@@ -428,7 +431,8 @@ export async function searchCities(
 ) {
   await loadData();
 
-  const q = clean(query);
+  const q =
+    normaliseText(query);
 
   if (q.length < 2) {
     return [];
@@ -447,47 +451,79 @@ export async function searchCities(
       options.countryCode
     ).toUpperCase();
 
-  const sourceCities =
-    countryCode
-      ? cities.filter(
-          (city) =>
-            city.countryCode ===
-            countryCode
-        )
-      : cities;
+  const best = [];
 
-  return sourceCities
-    .map((city) => ({
+  for (const city of cities) {
+    if (
+      countryCode &&
+      city.countryCode !==
+        countryCode
+    ) {
+      continue;
+    }
+
+    const score =
+      scoreCity(city, q);
+
+    if (score <= 0) {
+      continue;
+    }
+
+    const item = {
       city,
-      score: scoreCity(
-        city,
-        q
-      ),
-    }))
-    .filter(
-      (item) =>
-        item.score > 0
-    )
-    .sort((a, b) => {
-      if (
-        b.score !== a.score
-      ) {
-        return (
-          b.score -
-          a.score
-        );
-      }
+      score,
+    };
 
-      return (
-        b.city.population -
-        a.city.population
+    let insertAt =
+      best.length;
+
+    for (
+      let index = 0;
+      index < best.length;
+      index += 1
+    ) {
+      const existing =
+        best[index];
+
+      if (
+        score >
+          existing.score ||
+        (
+          score ===
+            existing.score &&
+          city.population >
+            existing.city.population
+        )
+      ) {
+        insertAt = index;
+        break;
+      }
+    }
+
+    if (insertAt < limit) {
+      best.splice(
+        insertAt,
+        0,
+        item
       );
-    })
-    .slice(0, limit)
-    .map(
-      ({ city }) =>
-        publicCity(city)
-    );
+
+      if (
+        best.length >
+        limit
+      ) {
+        best.pop();
+      }
+    } else if (
+      best.length < limit
+    ) {
+      best.push(item);
+    }
+  }
+
+  return best.map(
+    ({ city }) =>
+      publicCity(city)
+  );
 }
 
 /* -------------------------------------------------------------------------- */
