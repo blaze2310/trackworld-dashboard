@@ -535,23 +535,20 @@ function geoapifyApiKey() {
   );
 }
 
-function openMeteoBaseUrl() {
+function nasaPowerBaseUrl() {
   return (
     cleanString(
-      config?.openMeteo
+      config?.nasaPower
         ?.baseUrl ||
         config?.providers
-          ?.openMeteo
+          ?.nasaPower
           ?.baseUrl ||
         process.env
-          .OPEN_METEO_BASE_URL ||
+          .NASA_POWER_BASE_URL ||
         "",
       500
     ) ||
-    "https://api.open-meteo.com/v1"
-  ).replace(
-    /\/+$/,
-    ""
+    "https://power.larc.nasa.gov/api/temporal/daily/point"
   );
 }
 
@@ -670,10 +667,10 @@ const TIMEOUTS =
         12_000
       ),
 
-    openMeteo:
+    nasaPower:
       timeoutFromConfig(
-        "openMeteo",
-        12_000
+        "nasaPower",
+        30_000
       ),
 
     frankfurter:
@@ -5311,7 +5308,7 @@ export async function getWeather(
       "Destination coordinates are required for weather information.",
       {
         provider:
-          "Open-Meteo",
+          "NASA POWER",
 
         days: [],
       }
@@ -5324,130 +5321,7 @@ export async function getWeather(
       "A travel date is required for weather information.",
       {
         provider:
-          "Open-Meteo",
-
-        days: [],
-      }
-    );
-  }
-
-  if (
-    endDate &&
-    daysBetween(
-      startDate,
-      endDate
-    ) < 0
-  ) {
-    return unavailableResult(
-      "weather",
-      "The weather date range is invalid.",
-      {
-        provider:
-          "Open-Meteo",
-
-        days: [],
-      }
-    );
-  }
-
-  const daysUntilTrip =
-    dateDifferenceFromToday(
-      startDate
-    );
-
-  /*
-   * Open-Meteo detailed forecasts are intended for
-   * near-term travel planning. For trips outside the
-   * supported planning horizon we return a truthful
-   * pending state rather than generating weather.
-   */
-  const FORECAST_HORIZON_DAYS =
-    16;
-
-  if (
-    daysUntilTrip !==
-      null &&
-    daysUntilTrip >
-      FORECAST_HORIZON_DAYS
-  ) {
-    return availableResult(
-      "weather",
-      {
-        provider:
-          "Open-Meteo",
-
-        source:
-          "forecast-pending",
-
-        forecastAvailable:
-          false,
-
-        destination: {
-          city:
-            locationCity(
-              destination
-            ),
-
-          country:
-            locationCountry(
-              destination
-            ),
-
-          coordinates,
-        },
-
-        startDate,
-
-        endDate:
-          endDate ||
-          startDate,
-
-        daysUntilTrip,
-
-        days: [],
-
-        message:
-          "A detailed weather forecast will become available closer to departure.",
-
-        cached:
-          false,
-      }
-    );
-  }
-
-  /*
-   * Historical dates are not sent to the forecast
-   * endpoint.
-   */
-  if (
-    daysUntilTrip !==
-      null &&
-    daysUntilTrip < 0
-  ) {
-    return unavailableResult(
-      "weather",
-      "Weather forecasts are available for upcoming travel dates.",
-      {
-        provider:
-          "Open-Meteo",
-
-        destination: {
-          city:
-            locationCity(
-              destination
-            ),
-
-          country:
-            locationCountry(
-              destination
-            ),
-        },
-
-        startDate,
-
-        endDate:
-          endDate ||
-          startDate,
+          "NASA POWER",
 
         days: [],
       }
@@ -5458,38 +5332,89 @@ export async function getWeather(
     endDate ||
     startDate;
 
-  /*
-   * A trip can last up to 30 days while the detailed
-   * forecast horizon is shorter. Limit the provider
-   * request to the available forecast window rather
-   * than sending an invalid future end date.
-   */
-  const today =
-    todayUtc();
+  if (
+    daysBetween(
+      startDate,
+      requestedEnd
+    ) < 0
+  ) {
+    return unavailableResult(
+      "weather",
+      "The weather date range is invalid.",
+      {
+        provider:
+          "NASA POWER",
 
-  const horizonDate =
-    new Date(
-      today.getTime() +
-        FORECAST_HORIZON_DAYS *
-          86_400_000
+        days: [],
+      }
     );
+  }
 
-  const horizonDateString =
-    horizonDate
+  /*
+   * TrackWorld uses the same calendar dates from the
+   * previous year as a historical weather estimate for
+   * future travel dates.
+   */
+  function previousYearDate(
+    value
+  ) {
+    const [
+      year,
+      month,
+      day,
+    ] =
+      value
+        .split("-")
+        .map(Number);
+
+    const date =
+      new Date(
+        Date.UTC(
+          year - 1,
+          month - 1,
+          day
+        )
+      );
+
+    /*
+     * Handles dates such as 29 February safely. If the
+     * previous year does not contain that date, use the
+     * final valid day of that month.
+     */
+    if (
+      date.getUTCMonth() !==
+      month - 1
+    ) {
+      return new Date(
+        Date.UTC(
+          year - 1,
+          month,
+          0
+        )
+      )
+        .toISOString()
+        .slice(0, 10);
+    }
+
+    return date
       .toISOString()
       .slice(0, 10);
+  }
 
-  const providerEndDate =
-    requestedEnd >
-    horizonDateString
-      ? horizonDateString
-      : requestedEnd;
+  const historicalStartDate =
+    previousYearDate(
+      startDate
+    );
 
-  const partialForecast =
-    providerEndDate !==
-    requestedEnd;
+  const historicalEndDate =
+    previousYearDate(
+      requestedEnd
+    );
 
   const cachePayload = {
+    provider:
+      "nasa-power",
+
     latitude:
       round(
         coordinates.latitude,
@@ -5504,7 +5429,12 @@ export async function getWeather(
 
     startDate,
 
-    providerEndDate,
+    endDate:
+      requestedEnd,
+
+    historicalStartDate,
+
+    historicalEndDate,
   };
 
   const key =
@@ -5525,34 +5455,46 @@ export async function getWeather(
   }
 
   try {
+    const nasaDate =
+      (value) =>
+        value.replaceAll(
+          "-",
+          ""
+        );
+
     const url =
       buildUrl(
-        `${openMeteoBaseUrl()}/forecast`,
+        nasaPowerBaseUrl(),
         {
-          latitude:
-            coordinates.latitude,
+          parameters: [
+            "T2M_MAX",
+            "T2M_MIN",
+          ].join(","),
+
+          community:
+            "AG",
 
           longitude:
             coordinates.longitude,
 
-          start_date:
-            startDate,
+          latitude:
+            coordinates.latitude,
 
-          end_date:
-            providerEndDate,
+          start:
+            nasaDate(
+              historicalStartDate
+            ),
 
-          timezone:
-            "auto",
+          end:
+            nasaDate(
+              historicalEndDate
+            ),
 
-          daily: [
-            "weather_code",
-            "temperature_2m_max",
-            "temperature_2m_min",
-            "precipitation_probability_max",
-            "wind_speed_10m_max",
-            "sunrise",
-            "sunset",
-          ].join(","),
+          format:
+            "JSON",
+
+          "time-standard":
+            "UTC",
         }
       );
 
@@ -5561,23 +5503,89 @@ export async function getWeather(
         url,
         {
           provider:
-            "Open-Meteo",
+            "NASA POWER",
 
           timeoutMs:
-            TIMEOUTS.openMeteo,
+            TIMEOUTS.nasaPower,
         }
       );
 
+    const parameters =
+      response
+        ?.properties
+        ?.parameter ||
+      {};
+
+    const maximum =
+      parameters.T2M_MAX ||
+      {};
+
+    const minimum =
+      parameters.T2M_MIN ||
+      {};
+
+    const historicalDates =
+      Object.keys(maximum)
+        .sort();
+
+    const tripStart =
+      new Date(
+        `${startDate}T00:00:00Z`
+      );
+
     const days =
-      normaliseWeatherDays(
-        response.daily
+      historicalDates.map(
+        (
+          historicalKey,
+          index
+        ) => {
+          const displayDate =
+            new Date(
+              tripStart.getTime() +
+                index *
+                  86_400_000
+            )
+              .toISOString()
+              .slice(0, 10);
+
+          return {
+            date:
+              displayDate,
+
+            historicalDate:
+              `${historicalKey.slice(
+                0,
+                4
+              )}-${historicalKey.slice(
+                4,
+                6
+              )}-${historicalKey.slice(
+                6,
+                8
+              )}`,
+
+            temperatureMaxC:
+              numberOrNull(
+                maximum[
+                  historicalKey
+                ]
+              ),
+
+            temperatureMinC:
+              numberOrNull(
+                minimum[
+                  historicalKey
+                ]
+              ),
+          };
+        }
       );
 
     if (
       days.length === 0
     ) {
       throw new Error(
-        "Open-Meteo returned no daily forecast data."
+        "NASA POWER returned no daily weather data."
       );
     }
 
@@ -5586,15 +5594,16 @@ export async function getWeather(
         "weather",
         {
           provider:
-            "Open-Meteo",
+            "NASA POWER",
 
           source:
-            "forecast",
+            "historical-estimate",
 
           forecastAvailable:
             true,
 
-          partialForecast,
+          historicalEstimate:
+            true,
 
           destination: {
             city:
@@ -5615,31 +5624,14 @@ export async function getWeather(
             coordinates,
           },
 
-          timezone:
-            cleanString(
-              response.timezone,
-              100
-            ),
-
-          timezoneAbbreviation:
-            cleanString(
-              response
-                .timezone_abbreviation,
-              40
-            ),
-
-          elevationMeters:
-            numberOrNull(
-              response.elevation
-            ),
-
           startDate,
 
           endDate:
             requestedEnd,
 
-          forecastEndDate:
-            providerEndDate,
+          historicalStartDate,
+
+          historicalEndDate,
 
           days,
 
@@ -5647,9 +5639,7 @@ export async function getWeather(
             false,
 
           message:
-            partialForecast
-              ? "Weather is currently available for part of the trip. Additional forecast days will appear closer to departure."
-              : "",
+            "",
         }
       );
 
@@ -5662,16 +5652,22 @@ export async function getWeather(
     return result;
   } catch (error) {
     logProviderError(
-      "Open-Meteo",
+      "NASA POWER",
       error
     );
 
     return unavailableResult(
       "weather",
-      "Weather information could not be retrieved right now.",
+      "Historical weather information could not be retrieved right now.",
       {
         provider:
-          "Open-Meteo",
+          "NASA POWER",
+
+        source:
+          "historical-estimate",
+
+        historicalEstimate:
+          true,
 
         destination: {
           city:
@@ -5689,6 +5685,10 @@ export async function getWeather(
 
         endDate:
           requestedEnd,
+
+        historicalStartDate,
+
+        historicalEndDate,
 
         days: [],
       }

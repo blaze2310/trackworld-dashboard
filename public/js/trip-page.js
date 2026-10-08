@@ -1243,47 +1243,17 @@ function renderWeather() {
         : [];
 
   if (!days.length) {
-    /*
-     * A trip can be planned much further ahead than a
-     * reliable weather forecast can be produced.
-     * Keep the section useful without inventing weather.
-     */
     setText(
       elements.weatherStatus,
-      ""
+      "Unavailable"
     );
-
-    const destination =
-      clean(
-        state.trip?.route
-          ?.destination?.city ??
-        state.trip?.route
-          ?.destination?.name ??
-        state.trip?.route
-          ?.destination
-      ) ||
-      "your destination";
 
     elements.weatherContent
       .innerHTML =
-      `
-        <div class="weather-future-state">
-          <div class="weather-future-icon" aria-hidden="true">
-            ☁
-          </div>
-
-          <div class="weather-future-copy">
-            <strong>
-              Forecast not available yet
-            </strong>
-
-            <span>
-              ${escapeHtml(destination)} is too far ahead for a reliable daily forecast.
-              Weather will become available automatically closer to departure.
-            </span>
-          </div>
-        </div>
-      `;
+      notice(
+        "Weather information is currently unavailable.",
+        true
+      );
 
     return;
   }
@@ -1292,7 +1262,7 @@ function renderWeather() {
     elements.weatherStatus,
     weather.cached
       ? "Cached"
-      : "Forecast"
+      : "Weather"
   );
 
   const highs =
@@ -1367,8 +1337,8 @@ function renderWeather() {
           <span>
             ${
               averageLow !== null
-                ? `Average low ${Math.round(averageLow)}°C · ${days.length}-day forecast`
-                : `${days.length}-day forecast`
+                ? `Average low ${Math.round(averageLow)}°C · ${days.length}-day weather`
+                : `${days.length}-day weather`
             }
           </span>
         </div>
