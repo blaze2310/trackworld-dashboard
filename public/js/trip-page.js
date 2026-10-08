@@ -1243,21 +1243,47 @@ function renderWeather() {
         : [];
 
   if (!days.length) {
+    /*
+     * A trip can be planned much further ahead than a
+     * reliable weather forecast can be produced.
+     * Keep the section useful without inventing weather.
+     */
     setText(
       elements.weatherStatus,
-      weather.available === false
-        ? "Unavailable"
-        : "Pending"
+      ""
     );
+
+    const destination =
+      clean(
+        state.trip?.route
+          ?.destination?.city ??
+        state.trip?.route
+          ?.destination?.name ??
+        state.trip?.route
+          ?.destination
+      ) ||
+      "your destination";
 
     elements.weatherContent
       .innerHTML =
-      notice(
-        clean(
-          weather.message
-        ) ||
-          "Weather information for these dates is not available yet."
-      );
+      `
+        <div class="weather-future-state">
+          <div class="weather-future-icon" aria-hidden="true">
+            ☁
+          </div>
+
+          <div class="weather-future-copy">
+            <strong>
+              Forecast not available yet
+            </strong>
+
+            <span>
+              ${escapeHtml(destination)} is too far ahead for a reliable daily forecast.
+              Weather will become available automatically closer to departure.
+            </span>
+          </div>
+        </div>
+      `;
 
     return;
   }
@@ -2563,105 +2589,159 @@ function renderStays() {
   );
 }
 
-function hydrateStayImages(
+async function hydrateStayImages(
   stays
 ) {
   const cards =
-    elements.staysContent
-      ?.querySelectorAll(
-        ".result-card"
-      ) || [];
+    Array.from(
+      elements.staysContent
+        ?.querySelectorAll(
+          ".result-card"
+        ) ?? []
+    );
 
-  cards.forEach(
-    (card, index) => {
-      const stay =
-        stays[index];
+  await Promise.allSettled(
+    cards.map(
+      (card, index) =>
+        loadStayImage(
+          card,
+          stays[index]
+        )
+    )
+  );
+}
 
-      const image =
-        card.querySelector(
-          ".result-card-image img"
+async function loadStayImage(
+  card,
+  stay
+) {
+  const image =
+    card?.querySelector(
+      ".result-card-image img"
+    );
+
+  if (!image || !stay) {
+    return;
+  }
+
+  const candidates = [
+    ...(
+      Array.isArray(
+        stay.images
+      )
+        ? stay.images
+        : []
+    ),
+
+    stay.image,
+    stay.imageUrl,
+    stay.thumbnail,
+    stay.photo,
+  ]
+    .map(clean)
+    .filter(Boolean)
+    .filter(
+      (url, index, list) =>
+        list.indexOf(url) ===
+        index
+    );
+
+  const fallback =
+    image.nextElementSibling;
+
+  image.removeAttribute(
+    "src"
+  );
+
+  image.style.display =
+    "none";
+
+  fallback?.classList.add(
+    "visible"
+  );
+
+  for (
+    const candidate of candidates
+  ) {
+    try {
+      const response =
+        await fetch(
+          candidate
         );
 
-      if (!image) {
-        return;
+      if (!response.ok) {
+        throw new Error(
+          `Image request failed: ${response.status}`
+        );
       }
 
-      const candidates = [
-        ...(
-          Array.isArray(
-            stay?.images
-          )
-            ? stay.images
-            : []
-        ),
+      const blob =
+        await response.blob();
 
-        stay?.image,
-        stay?.imageUrl,
-        stay?.thumbnail,
-        stay?.photo,
-      ]
-        .map(clean)
-        .filter(Boolean)
-        .filter(
-          (url, position, list) =>
-            list.indexOf(url) ===
-            position
+      if (
+        !blob.type.startsWith(
+          "image/"
+        )
+      ) {
+        throw new Error(
+          "Response was not an image."
+        );
+      }
+
+      const objectUrl =
+        URL.createObjectURL(
+          blob
         );
 
-      if (!candidates.length) {
-        return;
-      }
+      const loaded =
+        await new Promise(
+          resolve => {
+            image.onload = () => {
+              image.style.display =
+                "block";
 
-      let candidateIndex = 0;
+              image.style.opacity =
+                "1";
 
-      const fallback =
-        image.nextElementSibling;
+              fallback?.classList.remove(
+                "visible"
+              );
 
-      image.onerror = null;
+              resolve(true);
+            };
 
-      image.addEventListener(
-        "load",
-        () => {
-          image.style.display =
-            "";
+            image.onerror = () => {
+              URL.revokeObjectURL(
+                objectUrl
+              );
 
-          if (fallback) {
-            fallback.style.display =
-              "none";
-          }
-        }
-      );
+              resolve(false);
+            };
 
-      image.addEventListener(
-        "error",
-        () => {
-          candidateIndex += 1;
-
-          if (
-            candidateIndex <
-            candidates.length
-          ) {
             image.src =
-              candidates[
-                candidateIndex
-              ];
-
-            return;
+              objectUrl;
           }
+        );
 
-          image.style.display =
-            "none";
-
-          if (fallback) {
-            fallback.style.display =
-              "grid";
-          }
-        }
+      if (loaded) {
+        return;
+      }
+    } catch (error) {
+      console.warn(
+        "[TrackWorld] Stay image candidate failed:",
+        clean(stay.name) ||
+          "Accommodation",
+        candidate,
+        error
       );
-
-      image.src =
-        candidates[0];
     }
+  }
+
+  image.style.display =
+    "none";
+
+  fallback?.classList.add(
+    "visible"
   );
 }
 
@@ -2719,14 +2799,16 @@ function renderStay(stay) {
     imageUrl
       ? `
         <img
-          src="${escapeHtml(imageUrl)}"
+          data-stay-image="true"
           alt="${escapeHtml(name)}"
-          loading="lazy"
+          loading="eager"
+          decoding="async"
           referrerpolicy="no-referrer"
+          style="display:none;opacity:0"
         >
 
         <span
-          class="result-card-image-fallback"
+          class="result-card-image-fallback visible"
           aria-hidden="true"
         >
           ⌂

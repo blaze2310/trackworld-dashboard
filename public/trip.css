@@ -3227,3 +3227,48 @@ a {
   font-size: 11px;
   font-weight: 600;
 }
+
+/* Far-future weather state */
+
+.weather-future-state {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 26px 28px;
+  border: 1px solid #ece7e4;
+  border-radius: 18px;
+  background: #faf9f8;
+}
+
+.weather-future-icon {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: #fff0f1;
+  color: #c91f32;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.weather-future-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.weather-future-copy strong {
+  color: #1e1e1e;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.weather-future-copy span {
+  max-width: 620px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
