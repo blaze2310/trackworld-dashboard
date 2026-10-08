@@ -750,9 +750,33 @@ function logProviderError(
         String(error)
     );
 
+  const cause =
+    sanitiseProviderMessage(
+      error?.cause?.message ||
+        error?.cause?.code ||
+        ""
+    );
+
+  const code =
+    sanitiseProviderMessage(
+      error?.code ||
+        error?.cause?.code ||
+        ""
+    );
+
   console.error(
     `[TrackWorld] ${provider} request failed:`,
-    message
+    {
+      message,
+      code,
+      cause,
+      name:
+        error?.name ||
+        "",
+      statusCode:
+        error?.statusCode ||
+        null,
+    }
   );
 }
 
